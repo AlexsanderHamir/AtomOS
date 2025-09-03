@@ -1,4 +1,4 @@
-package blockmanager
+package blocks
 
 import (
 	"strings"

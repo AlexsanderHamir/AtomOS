@@ -16,7 +16,7 @@ binary:
   assets:
     darwin-arm64: prof-darwin-arm64
 
-# CLI entries exposed by this block
+# "LSP" entries exposed by this block
 entries:
   - name: run
     command: prof run

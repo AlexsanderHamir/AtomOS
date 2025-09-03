@@ -1,4 +1,4 @@
-package blockmanager
+package blocks
 
 // 	When requiring dependencies on a YAML file the user will just pass the repo,
 //  and it will be assumed that a agentic_support.yaml file is at the root of the project.

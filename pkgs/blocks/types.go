@@ -1,4 +1,4 @@
-package blockmanager
+package blocks
 
 import "gopkg.in/yaml.v3"
 
