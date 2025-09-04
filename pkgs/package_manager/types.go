@@ -6,13 +6,14 @@ import (
 
 // BlockMetadata represents metadata about an installed block
 type BlockMetadata struct {
-	Name        string    `json:"name"`
-	Version     string    `json:"version"`
-	SourceRepo  string    `json:"source_repo"`
-	BinaryPath  string    `json:"binary_path"`
-	InstalledAt time.Time `json:"installed_at"`
-	LastUpdated time.Time `json:"last_updated"`
-	IsActive    bool      `json:"is_active"`
+	Name        string           `json:"name"`
+	Version     string           `json:"version"`
+	SourceRepo  string           `json:"source_repo"`
+	BinaryPath  string           `json:"binary_path"`
+	InstalledAt time.Time        `json:"installed_at"`
+	LastUpdated time.Time        `json:"last_updated"`
+	IsActive    bool             `json:"is_active"`
+	LSPEntries  map[string]Entry `json:"lsp_entries,omitempty"`
 }
 
 // InstallRequest represents a request to install a block
@@ -50,8 +51,10 @@ type BlockInfo struct {
 		From   string            `yaml:"from"`
 		Assets map[string]string `yaml:"assets"`
 	} `yaml:"binary"`
-	Entries    map[string]Entry `yaml:"entries"`
-	BinaryPath string           // Path to the downloaded binary
+	LSP struct {
+		Entries map[string]Entry `yaml:"entries"`
+	} `yaml:"lsp"`
+	BinaryPath string // Path to the downloaded binary
 }
 
 // Entry represents a CLI entry from the block

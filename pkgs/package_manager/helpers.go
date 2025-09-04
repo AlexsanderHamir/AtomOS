@@ -138,19 +138,30 @@ func (pm *PackageManager) downloadBinary(repo, version string, blockInfo *BlockI
 
 // isBlockInstalled checks if a block is already installed
 func (pm *PackageManager) isBlockInstalled(blockName string) bool {
-	metadataPath := filepath.Join(pm.InstallDir, "metadata", fmt.Sprintf("%s.json", blockName))
-	_, err := os.Stat(metadataPath)
-	return err == nil
+	// Consider installed if there's at least one versioned metadata file under metadata/<block>/
+	blockDir := filepath.Join(pm.InstallDir, "metadata", blockName)
+	entries, err := os.ReadDir(blockDir)
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".json") {
+			return true
+		}
+	}
+	return false
 }
 
 // storeMetadata stores block metadata to disk
+
 func (pm *PackageManager) storeMetadata(metadata *BlockMetadata) error {
-	metadataDir := filepath.Join(pm.InstallDir, "metadata")
+	// Store per-version at metadata/<block>/<version>.json
+	metadataDir := filepath.Join(pm.InstallDir, "metadata", metadata.Name)
 	if err := os.MkdirAll(metadataDir, 0755); err != nil {
 		return fmt.Errorf("failed to create metadata directory: %w", err)
 	}
 
-	metadataPath := filepath.Join(metadataDir, fmt.Sprintf("%s.json", metadata.Name))
+	metadataPath := filepath.Join(metadataDir, fmt.Sprintf("%s.json", metadata.Version))
 	file, err := os.Create(metadataPath)
 	if err != nil {
 		return fmt.Errorf("failed to create metadata file: %w", err)
@@ -166,9 +177,34 @@ func (pm *PackageManager) storeMetadata(metadata *BlockMetadata) error {
 
 // getMetadata retrieves block metadata from disk
 func (pm *PackageManager) getMetadata(blockName string) (*BlockMetadata, error) {
-	metadataPath := filepath.Join(pm.InstallDir, "metadata", fmt.Sprintf("%s.json", blockName))
+	// Choose the most recently modified version metadata file
+	blockDir := filepath.Join(pm.InstallDir, "metadata", blockName)
+	entries, err := os.ReadDir(blockDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open metadata directory: %w", err)
+	}
 
-	file, err := os.Open(metadataPath)
+	var latestPath string
+	var latestMod int64
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		p := filepath.Join(blockDir, e.Name())
+		info, err := os.Stat(p)
+		if err != nil {
+			continue
+		}
+		if info.ModTime().UnixNano() > latestMod {
+			latestMod = info.ModTime().UnixNano()
+			latestPath = p
+		}
+	}
+	if latestPath == "" {
+		return nil, fmt.Errorf("no metadata found for block %s", blockName)
+	}
+
+	file, err := os.Open(latestPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open metadata file: %w", err)
 	}
@@ -274,10 +310,16 @@ func (pm *PackageManager) isExistingInstallation() bool {
 		return false
 	}
 
-	// If there are any .json files in the metadata directory, it's an existing installation
+	// If any block directory contains a versioned metadata file, it's an existing installation
 	for _, file := range files {
-		if !file.IsDir() && strings.HasSuffix(file.Name(), ".json") {
-			return true
+		if file.IsDir() {
+			blockDir := filepath.Join(metadataDir, file.Name())
+			entries, _ := os.ReadDir(blockDir)
+			for _, e := range entries {
+				if !e.IsDir() && strings.HasSuffix(e.Name(), ".json") {
+					return true
+				}
+			}
 		}
 	}
 
@@ -298,8 +340,8 @@ func (pm *PackageManager) list() (*listResult, error) {
 
 	var blocks []BlockMetadata
 	for _, file := range files {
-		if !file.IsDir() && strings.HasSuffix(file.Name(), ".json") {
-			blockName := strings.TrimSuffix(file.Name(), ".json")
+		if file.IsDir() {
+			blockName := file.Name()
 			metadata, err := pm.getMetadata(blockName)
 			if err != nil {
 				continue

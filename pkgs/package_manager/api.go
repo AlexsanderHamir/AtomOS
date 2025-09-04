@@ -36,21 +36,21 @@ func NewPackageManager() *PackageManager {
 	return pm
 }
 
-// Install downloads and installs a block
-func (pm *PackageManager) Install(req InstallRequest) (*InstallResult, error) {
+// Install downloads a block and returns its metadata
+func (pm *PackageManager) Install(req InstallRequest) (*BlockMetadata, error) {
 	blockInfo, err := pm.fetchBlockInfo(req.Repo)
 	if err != nil {
-		return &InstallResult{
-			Success: false,
-			Message: fmt.Sprintf("Failed to fetch block info: %v", err),
-		}, err
+		return nil, fmt.Errorf("failed to fetch block info: %w", err)
 	}
 
 	if !req.Force {
 		if pm.isBlockInstalled(blockInfo.Name) {
-			return &InstallResult{
-				Message: fmt.Sprintf("Block '%s' is already installed. Use --force to reinstall.", blockInfo.Name),
-			}, nil
+			// Return existing metadata if already installed
+			metadata, metaErr := pm.getMetadata(blockInfo.Name)
+			if metaErr != nil {
+				return nil, fmt.Errorf("block '%s' is already installed but failed to read metadata: %w", blockInfo.Name, metaErr)
+			}
+			return metadata, nil
 		}
 	}
 
@@ -58,19 +58,14 @@ func (pm *PackageManager) Install(req InstallRequest) (*InstallResult, error) {
 	if version == "" {
 		latestRelease, err := pm.getLatestRelease(req.Repo)
 		if err != nil {
-			return &InstallResult{
-				Message: fmt.Sprintf("Failed to get latest release: %v", err),
-			}, err
+			return nil, fmt.Errorf("failed to get latest release: %w", err)
 		}
 		version = latestRelease.TagName
 	}
 
 	binaryPath, err := pm.downloadBinary(req.Repo, version, blockInfo)
 	if err != nil {
-		return &InstallResult{
-			Success: false,
-			Message: fmt.Sprintf("Failed to download binary: %v", err),
-		}, err
+		return nil, fmt.Errorf("failed to download binary: %w", err)
 	}
 
 	metadata := &BlockMetadata{
@@ -81,22 +76,14 @@ func (pm *PackageManager) Install(req InstallRequest) (*InstallResult, error) {
 		InstalledAt: time.Now(),
 		LastUpdated: time.Now(),
 		IsActive:    true,
+		LSPEntries:  blockInfo.LSP.Entries,
 	}
 
 	if err := pm.storeMetadata(metadata); err != nil {
-		return &InstallResult{
-			Success: false,
-			Message: fmt.Sprintf("Failed to store metadata: %v", err),
-		}, err
+		return nil, fmt.Errorf("failed to store metadata: %w", err)
 	}
 
-	return &InstallResult{
-		Success:    true,
-		Message:    fmt.Sprintf("Successfully installed block '%s' version %s", blockInfo.Name, version),
-		BinaryPath: binaryPath,
-		BlockName:  blockInfo.Name,
-		Version:    version,
-	}, nil
+	return metadata, nil
 }
 
 // GetLoadedBlock returns a specific block by name from the loaded installation
@@ -169,6 +156,7 @@ func (pm *PackageManager) Update(req UpdateRequest) (*UpdateResult, error) {
 	metadata.Version = version
 	metadata.BinaryPath = binaryPath
 	metadata.LastUpdated = time.Now()
+	metadata.LSPEntries = blockInfo.LSP.Entries
 
 	if err := pm.storeMetadata(metadata); err != nil {
 		return &UpdateResult{
@@ -197,10 +185,13 @@ func (pm *PackageManager) Uninstall(blockName string) error {
 		return fmt.Errorf("failed to remove binary: %v", err)
 	}
 
-	metadataPath := filepath.Join(pm.InstallDir, "metadata", fmt.Sprintf("%s.json", blockName))
+	metadataPath := filepath.Join(pm.InstallDir, "metadata", blockName, fmt.Sprintf("%s.json", metadata.Version))
 	if err := os.Remove(metadataPath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove metadata: %v", err)
 	}
+
+	// Attempt to remove block directory if empty
+	_ = os.Remove(filepath.Join(pm.InstallDir, "metadata", blockName))
 
 	return nil
 }
