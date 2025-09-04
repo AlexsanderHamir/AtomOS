@@ -1,4 +1,4 @@
-package package_manager
+package packagemanager
 
 import (
 	"crypto/sha256"
@@ -95,8 +95,8 @@ func (pm *PackageManager) downloadAndVerifyBinary(repo, version string, blockInf
 		return "", "", fmt.Errorf("no binary found for platform %s", platformKey)
 	}
 
-	// Create install directory if it doesn't exist
-	installDir := filepath.Join(pm.InstallDir, "binaries", blockInfo.Name)
+	// Create per-block directory under the user's bin namespace, e.g., ~/bin/atomos/<block>
+	installDir := filepath.Join(defaultBinaryBaseDir(), blockInfo.Name)
 	if err := os.MkdirAll(installDir, 0755); err != nil {
 		return "", "", fmt.Errorf("failed to create install directory: %w", err)
 	}
@@ -191,4 +191,88 @@ func (pm *PackageManager) getMetadata(blockName string) (*BlockMetadata, error) 
 	}
 
 	return &metadata, nil
+}
+
+const (
+	getDefaultInstallDirPathName = ".atomos"
+	getDefaultCacheDirPathName   = "cache"
+)
+
+// userHomeDir resolves the user's home directory reliably.
+func userHomeDir() string {
+	if homeDir, err := os.UserHomeDir(); err == nil && homeDir != "" {
+		return homeDir
+	}
+	if envHome := os.Getenv("HOME"); envHome != "" {
+		return envHome
+	}
+	// As an extreme fallback, use current working directory.
+	if cwd, err := os.Getwd(); err == nil && cwd != "" {
+		return cwd
+	}
+
+	return os.TempDir()
+}
+
+func getDefaultInstallDirPath() string {
+	home := userHomeDir()
+	return filepath.Join(home, getDefaultInstallDirPathName)
+}
+
+func getDefaultCacheDirPath(installDir string) string {
+	return filepath.Join(installDir, getDefaultCacheDirPathName)
+}
+
+// defaultBinaryBaseDir returns the base directory for installed binaries.
+// Example: ~/.atomos
+func defaultBinaryBaseDir() string {
+	return getDefaultInstallDirPath()
+}
+
+// loadExistingInstallation loads the existing installation state
+func (pm *PackageManager) loadExistingInstallation() error {
+	if !pm.IsExistingInstallation() {
+		return nil
+	}
+
+	// Validate the existing installation to ensure it's in a good state
+	if err := pm.checkBinariesExist(); err != nil {
+		return fmt.Errorf("installation validation failed: %w", err)
+	}
+
+	// Load all existing metadata into memory for faster access
+	listResult, err := pm.List()
+	if err != nil {
+		return fmt.Errorf("failed to load existing blocks: %w", err)
+	}
+
+	// Store the loaded blocks in memory as a map for fast lookups
+	pm.loadedBlocks = make(map[string]BlockMetadata)
+	for _, block := range listResult.Blocks {
+		pm.loadedBlocks[block.Name] = block
+	}
+	pm.isLoaded = true
+
+	// Log the loaded installation state
+	if len(listResult.Blocks) > 0 {
+		fmt.Printf("Loaded existing AtomOS installation with %d blocks\n", len(listResult.Blocks))
+	}
+
+	return nil
+}
+
+// checkBinariesExist checks if the existing blocks have valid binaries.
+func (pm *PackageManager) checkBinariesExist() error {
+	listResult, err := pm.List()
+	if err != nil {
+		return fmt.Errorf("failed to list installed blocks: %w", err)
+	}
+
+	for _, block := range listResult.Blocks {
+		if _, err := os.Stat(block.BinaryPath); os.IsNotExist(err) {
+			return fmt.Errorf("block '%s' metadata exists but binary is missing: %s", block.Name, block.BinaryPath)
+		}
+	}
+
+	return nil
 }

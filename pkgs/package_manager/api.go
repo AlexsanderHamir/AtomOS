@@ -1,4 +1,4 @@
-package package_manager
+package packagemanager
 
 import (
 	"fmt"
@@ -10,78 +10,39 @@ import (
 
 // NewPackageManager creates a new package manager instance
 // If the hidden atoms directory already exists, it will be loaded from that directory
-func NewPackageManager(installDir, cacheDir string) *PackageManager {
-	// Check if the directory already exists
+func NewPackageManager() *PackageManager {
+	installDir := getDefaultInstallDirPath()
+	cacheDir := getDefaultCacheDirPath(installDir)
+
 	var dirExists bool
 	if _, err := os.Stat(installDir); err == nil {
 		dirExists = true
 	}
 
-	// Ensure directories exist
-	os.MkdirAll(installDir, 0755)
-	os.MkdirAll(cacheDir, 0755)
-
-	// Create package manager instance
 	pm := &PackageManager{
 		InstallDir: installDir,
 		CacheDir:   cacheDir,
 	}
 
-	// If the directory already existed, load the existing installation state
 	if dirExists {
-		// Load existing installation state
 		if err := pm.loadExistingInstallation(); err != nil {
-			// Log the loading error but don't fail - the package manager can still work
-			// with a partially corrupted installation, and users can fix issues manually
 			fmt.Printf("Warning: Failed to load existing installation: %v\n", err)
 		}
+		return pm
 	}
+
+	os.MkdirAll(installDir, 0755)
+	os.MkdirAll(cacheDir, 0755)
 
 	return pm
 }
 
-// loadExistingInstallation loads the existing installation state
-func (pm *PackageManager) loadExistingInstallation() error {
-	// Check if there are actually any blocks to load
-	if !pm.IsExistingInstallation() {
-		// No existing blocks, so nothing to load
-		return nil
-	}
-
-	// Validate the existing installation to ensure it's in a good state
-	if err := pm.ValidateInstallation(); err != nil {
-		return fmt.Errorf("installation validation failed: %w", err)
-	}
-
-	// Load all existing metadata into memory for faster access
-	listResult, err := pm.List()
-	if err != nil {
-		return fmt.Errorf("failed to load existing blocks: %w", err)
-	}
-
-	// Store the loaded blocks in memory as a map for fast lookups
-	pm.loadedBlocks = make(map[string]BlockMetadata)
-	for _, block := range listResult.Blocks {
-		pm.loadedBlocks[block.Name] = block
-	}
-	pm.isLoaded = true
-
-	// Log the loaded installation state
-	if len(listResult.Blocks) > 0 {
-		fmt.Printf("Loaded existing AtomOS installation with %d blocks\n", len(listResult.Blocks))
-	}
-
-	return nil
-}
-
 // IsExistingInstallation checks if this package manager is working with an existing installation
 func (pm *PackageManager) IsExistingInstallation() bool {
-	// If we've already loaded the installation, use that information
 	if pm.isLoaded {
 		return len(pm.loadedBlocks) > 0
 	}
 
-	// Check if there are any existing metadata files
 	metadataDir := filepath.Join(pm.InstallDir, "metadata")
 	if _, err := os.Stat(metadataDir); err != nil {
 		return false
@@ -137,27 +98,6 @@ func (pm *PackageManager) IsBlockLoaded(blockName string) bool {
 // IsLoaded returns whether the installation has been loaded
 func (pm *PackageManager) IsLoaded() bool {
 	return pm.isLoaded
-}
-
-// ValidateInstallation checks if the existing installation is valid
-func (pm *PackageManager) ValidateInstallation() error {
-	if !pm.IsExistingInstallation() {
-		return nil // Not an existing installation, nothing to validate
-	}
-
-	// Check if all metadata files have corresponding binaries
-	listResult, err := pm.List()
-	if err != nil {
-		return fmt.Errorf("failed to list installed blocks: %w", err)
-	}
-
-	for _, block := range listResult.Blocks {
-		if _, err := os.Stat(block.BinaryPath); os.IsNotExist(err) {
-			return fmt.Errorf("block '%s' metadata exists but binary is missing: %s", block.Name, block.BinaryPath)
-		}
-	}
-
-	return nil
 }
 
 // GetInstallationStats returns statistics about the current installation
@@ -229,7 +169,6 @@ func (pm *PackageManager) Install(req InstallRequest) (*InstallResult, error) {
 		latestRelease, err := pm.getLatestRelease(req.Repo)
 		if err != nil {
 			return &InstallResult{
-				Success: false,
 				Message: fmt.Sprintf("Failed to get latest release: %v", err),
 			}, err
 		}
@@ -393,7 +332,7 @@ func (pm *PackageManager) List() (*ListResult, error) {
 			blockName := strings.TrimSuffix(file.Name(), ".json")
 			metadata, err := pm.getMetadata(blockName)
 			if err != nil {
-				continue // Skip corrupted metadata
+				continue
 			}
 			blocks = append(blocks, *metadata)
 		}

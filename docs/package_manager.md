@@ -18,7 +18,8 @@ A simple package manager for AtomOS blocks that can download, store, delete, and
 
 ### Core Methods
 
-- `NewPackageManager(installDir, cacheDir string) *PackageManager` - Creates a new package manager instance and loads existing installation if present
+– `NewPackageManager() *PackageManager` - Creates a new package manager instance using default directories and loads existing installation if present
+
 - `Install(req InstallRequest) (*InstallResult, error)` - Installs a block
 - `Update(req UpdateRequest) (*UpdateResult, error)` - Updates an installed block
 - `Uninstall(blockName string) error` - Removes an installed block
@@ -32,7 +33,7 @@ A simple package manager for AtomOS blocks that can download, store, delete, and
 - `GetLoadedBlocks() []BlockMetadata` - Returns the blocks loaded from existing installation
 - `GetLoadedBlock(blockName string) (BlockMetadata, bool)` - Returns a specific block by name from loaded installation
 - `IsBlockLoaded(blockName string) bool` - Checks if a specific block is loaded in memory
-- `ValidateInstallation() error` - Validates the integrity of an existing installation
+- `checkBinariesExist() error` - Validates the integrity of an existing installation
 - `GetInstallationStats() (*InstallationStats, error)` - Gets detailed installation statistics
 
 ## Installation Management
@@ -91,9 +92,9 @@ The package manager creates the following directory structure:
 
 ```
 ~/.atomos/
-├── binaries/
 │   └── block-name/
 │       └── binary-file
+~/.atomos/
 ├── metadata/
 │   └── block-name.json
 └── cache/
@@ -108,18 +109,15 @@ package main
 import (
     "fmt"
     "log"
-    "path/filepath"
-    "os"
 
     "github.com/AlexsanderHamir/AtomOS/pkgs/package_manager"
 )
 
 func main() {
     // Create package manager instance
+    // Uses default directories: ~/.atomos and ~/.atomos/cache
     // If ~/.atomos already exists, it will be loaded and validated
-    installDir := filepath.Join(os.Getenv("HOME"), ".atomos")
-    cacheDir := filepath.Join(installDir, "cache")
-    pm := package_manager.NewPackageManager(installDir, cacheDir)
+    pm := package_manager.NewPackageManager()
 
         // Check if this is an existing installation
     if pm.IsExistingInstallation() {
@@ -147,7 +145,7 @@ func main() {
         }
 
         // Validate the existing installation
-        if err := pm.ValidateInstallation(); err != nil {
+        if err := pm.checkBinariesExist(); err != nil {
             fmt.Printf("Warning: Installation validation failed: %v\n", err)
         }
 
