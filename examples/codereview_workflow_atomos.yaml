@@ -18,41 +18,18 @@ blocks:
     github: "https://github.com/example/reporter"
 
 connections:
-  # Step 1: Run profiler
+  # Step 1: Profiler output feeds Analyzer input (different nodes)
   - from_block: profiler
     from_entry: run
     output: profile_file
-    to_block: profiler
-    to_entry: report
-    input: profile_file
-
-  # Step 2: Analyze the profiler report
-  - from_block: profiler
-    from_entry: report
-    output: report_summary
     to_block: analyzer
     to_entry: analyze
     input: data_file
 
-  # Step 3: Branch: send analysis results to reporter and back to profiler for extra reporting
+  # Step 2: Analyzer results feed Reporter summary generation (different nodes)
   - from_block: analyzer
     from_entry: analyze
     output: analysis_result
     to_block: reporter
     to_entry: generate_summary
     input: input_data
-
-  - from_block: analyzer
-    from_entry: analyze
-    output: analysis_result
-    to_block: profiler
-    to_entry: report
-    input: profile_file
-
-  # Step 4: Reporter generates a final document
-  - from_block: reporter
-    from_entry: generate_summary
-    output: summary_document
-    to_block: reporter
-    to_entry: publish
-    input: doc_file

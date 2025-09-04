@@ -1,5 +1,5 @@
 # AtomOS Block Specification Example
-# This file defines a piece of software as a block that is supported by our runtime.
+# By implementing this file, any piece of software becomes a block into our runtime.
 
 name: go-profiler
 description: >
@@ -17,33 +17,37 @@ binary:
     darwin-arm64: prof-darwin-arm64
 
 # "LSP" entries exposed by this block
-entries:
-  - name: run
-    command: prof run
-    description: Run profiling on the target binary
-    inputs:
-      - name: target
-        type: path
-    outputs:
-      - name: profile
-        type: file
+lsp:
+  entries:
+    run:
+      name: run
+      command: prof run
+      description: Run profiling on the target binary
+      inputs:
+        - name: target
+          type: path
+      outputs:
+        - name: profile
+          type: file
 
-  - name: report
-    command: prof report
-    description: Generate a profiling report from a saved profile
-    inputs:
-      - name: profile
-        type: file
-    outputs:
-      - name: summary
-        type: string
+    report:
+      name: report
+      command: prof report
+      description: Generate a profiling report from a saved profile
+      inputs:
+        - name: profile
+          type: file
+      outputs:
+        - name: summary
+          type: string
 
-  - name: flamegraph
-    command: prof flamegraph
-    description: Generate a flamegraph from a profile file
-    inputs:
-      - name: profile
-        type: file
-    outputs:
-      - name: flamegraph
-        type: svg
+    flamegraph:
+      name: flamegraph
+      command: prof flamegraph
+      description: Generate a flamegraph from a profile file
+      inputs:
+        - name: profile
+          type: file
+      outputs:
+        - name: flamegraph
+          type: svg
