@@ -114,8 +114,8 @@ type UpdateResult struct {
 	BinaryPath string `json:"binary_path,omitempty"`
 }
 
-// ListResult represents the result of listing installed blocks
-type ListResult struct {
+// listResult represents the result of listing installed blocks
+type listResult struct {
 	Blocks []BlockMetadata `json:"blocks"`
 	Total  int             `json:"total"`
 }

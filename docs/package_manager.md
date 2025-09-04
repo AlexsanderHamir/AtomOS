@@ -23,7 +23,7 @@ A simple package manager for AtomOS blocks that can download, store, delete, and
 - `Install(req InstallRequest) (*InstallResult, error)` - Installs a block
 - `Update(req UpdateRequest) (*UpdateResult, error)` - Updates an installed block
 - `Uninstall(blockName string) error` - Removes an installed block
-- `List() (*ListResult, error)` - Lists all installed blocks
+- `list() (*listResult, error)` - lists all installed blocks
 - `GetInfo(blockName string) (*BlockMetadata, error)` - Gets information about a specific block
 
 ### Installation Management Methods
@@ -175,10 +175,10 @@ func main() {
 
     fmt.Printf("Install result: %+v\n", result)
 
-    // List installed blocks
-    listResult, err := pm.List()
+    // list installed blocks
+    listResult, err := pm.list()
     if err != nil {
-        log.Fatalf("List failed: %v", err)
+        log.Fatalf("list failed: %v", err)
     }
 
     fmt.Printf("Installed blocks: %d\n", listResult.Total)

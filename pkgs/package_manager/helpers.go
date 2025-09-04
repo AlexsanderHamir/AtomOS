@@ -234,7 +234,7 @@ func (pm *PackageManager) loadExistingInstallation() error {
 // checkBinariesExistAndLoad verifies that binaries referenced by installed blocks exist,
 // and loads their metadata into memory if they do.
 func (pm *PackageManager) checkBinariesExistAndLoad() error {
-	listResult, err := pm.List()
+	listResult, err := pm.list()
 	if err != nil {
 		return fmt.Errorf("failed to list installed blocks: %w", err)
 	}
@@ -282,4 +282,34 @@ func (pm *PackageManager) isExistingInstallation() bool {
 	}
 
 	return false
+}
+
+// list returns all installed blocks
+func (pm *PackageManager) list() (*listResult, error) {
+	metadataDir := filepath.Join(pm.InstallDir, "metadata")
+	if err := os.MkdirAll(metadataDir, 0755); err != nil {
+		return nil, err
+	}
+
+	files, err := os.ReadDir(metadataDir)
+	if err != nil {
+		return nil, err
+	}
+
+	var blocks []BlockMetadata
+	for _, file := range files {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".json") {
+			blockName := strings.TrimSuffix(file.Name(), ".json")
+			metadata, err := pm.getMetadata(blockName)
+			if err != nil {
+				continue
+			}
+			blocks = append(blocks, *metadata)
+		}
+	}
+
+	return &listResult{
+		Blocks: blocks,
+		Total:  len(blocks),
+	}, nil
 }
