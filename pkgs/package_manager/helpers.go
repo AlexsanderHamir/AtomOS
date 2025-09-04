@@ -51,6 +51,15 @@ func (pm *PackageManager) fetchBlockInfo(repo string) (*BlockInfo, error) {
 	return &blockInfo, nil
 }
 
+// convertEntriesToMap converts a slice of Entry to a map[string]Entry using the entry name as the key
+func convertEntriesToMap(entries []Entry) map[string]Entry {
+	result := make(map[string]Entry)
+	for _, entry := range entries {
+		result[entry.Name] = entry
+	}
+	return result
+}
+
 // getLatestRelease fetches the latest release from GitHub
 func (pm *PackageManager) getLatestRelease(repo string) (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
@@ -73,6 +82,31 @@ func (pm *PackageManager) getLatestRelease(repo string) (*GitHubRelease, error) 
 	return &release, nil
 }
 
+// getReleaseByTag fetches a specific GitHub release by tag and is tolerant
+// to tags with or without a leading 'v'.
+func (pm *PackageManager) getReleaseByTag(repo, tag string) (*GitHubRelease, error) {
+	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/v%s", repo, tag)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch release by tag: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		var release GitHubRelease
+		if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+			return nil, fmt.Errorf("failed to decode release JSON: %w", err)
+		}
+		return &release, nil
+	}
+
+	if resp.StatusCode != http.StatusNotFound {
+		return nil, fmt.Errorf("failed to fetch release by tag '%s': HTTP %d", tag, resp.StatusCode)
+	}
+
+	return nil, fmt.Errorf("release not found for tag '%s' (tried with/without 'v')", tag)
+}
+
 // downloadBinary downloads a binary for the current platform
 func (pm *PackageManager) downloadBinary(repo, version string, blockInfo *BlockInfo) (string, error) {
 	osName := runtime.GOOS
@@ -91,19 +125,33 @@ func (pm *PackageManager) downloadBinary(repo, version string, blockInfo *BlockI
 		return "", fmt.Errorf("no binary found for platform %s", platformKey)
 	}
 
-	// Create per-block and per-version directory under the user's namespace, e.g., ~/.atomos/<block>/<version>
-	installDir := filepath.Join(defaultBinaryBaseDir(), blockInfo.Name, version)
-	if err := os.MkdirAll(installDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create install directory: %w", err)
+	// Create per-block bin directory under the package manager's install directory
+	binDir := filepath.Join(pm.InstallDir, blockInfo.Name, "bin")
+	if err := os.MkdirAll(binDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create bin directory: %w", err)
 	}
 
 	// Construct the local file path
-	localPath := filepath.Join(installDir, binaryName)
+	localPath := filepath.Join(binDir, binaryName)
 
-	// Download the binary from GitHub releases
-	downloadURL := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", repo, version, binaryName)
+	// Resolve the release and pick the correct asset URL rather than constructing it
+	release, err := pm.getReleaseByTag(repo, version)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve release '%s': %w", version, err)
+	}
 
-	resp, err := http.Get(downloadURL)
+	var assetURL string
+	for _, a := range release.Assets {
+		if a.Name == binaryName {
+			assetURL = a.DownloadURL
+			break
+		}
+	}
+	if assetURL == "" {
+		return "", fmt.Errorf("asset '%s' not found in release %s", binaryName, release.TagName)
+	}
+
+	resp, err := http.Get(assetURL)
 	if err != nil {
 		return "", fmt.Errorf("failed to download binary: %w", err)
 	}
@@ -138,8 +186,8 @@ func (pm *PackageManager) downloadBinary(repo, version string, blockInfo *BlockI
 
 // isBlockInstalled checks if a block is already installed
 func (pm *PackageManager) isBlockInstalled(blockName string) bool {
-	// Consider installed if there's at least one versioned metadata file under metadata/<block>/
-	blockDir := filepath.Join(pm.InstallDir, "metadata", blockName)
+	// Consider installed if there's at least one versioned metadata file under <block>/metadata/
+	blockDir := filepath.Join(pm.InstallDir, blockName, "metadata")
 	entries, err := os.ReadDir(blockDir)
 	if err != nil {
 		return false
@@ -155,8 +203,8 @@ func (pm *PackageManager) isBlockInstalled(blockName string) bool {
 // storeMetadata stores block metadata to disk
 
 func (pm *PackageManager) storeMetadata(metadata *BlockMetadata) error {
-	// Store per-version at metadata/<block>/<version>.json
-	metadataDir := filepath.Join(pm.InstallDir, "metadata", metadata.Name)
+	// Store per-version at <block>/metadata/<version>.json
+	metadataDir := filepath.Join(pm.InstallDir, metadata.Name, "metadata")
 	if err := os.MkdirAll(metadataDir, 0755); err != nil {
 		return fmt.Errorf("failed to create metadata directory: %w", err)
 	}
@@ -178,7 +226,7 @@ func (pm *PackageManager) storeMetadata(metadata *BlockMetadata) error {
 // getMetadata retrieves block metadata from disk
 func (pm *PackageManager) getMetadata(blockName string) (*BlockMetadata, error) {
 	// Choose the most recently modified version metadata file
-	blockDir := filepath.Join(pm.InstallDir, "metadata", blockName)
+	blockDir := filepath.Join(pm.InstallDir, blockName, "metadata")
 	entries, err := os.ReadDir(blockDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open metadata directory: %w", err)
@@ -220,7 +268,6 @@ func (pm *PackageManager) getMetadata(blockName string) (*BlockMetadata, error) 
 
 const (
 	getDefaultInstallDirPathName = ".atomos"
-	getDefaultCacheDirPathName   = "cache"
 )
 
 // userHomeDir resolves the user's home directory reliably.
@@ -244,16 +291,6 @@ func getDefaultInstallDirPath() string {
 	return filepath.Join(home, getDefaultInstallDirPathName)
 }
 
-func getDefaultCacheDirPath(installDir string) string {
-	return filepath.Join(installDir, getDefaultCacheDirPathName)
-}
-
-// defaultBinaryBaseDir returns the base directory for installed binaries.
-// Example: ~/.atomos
-func defaultBinaryBaseDir() string {
-	return getDefaultInstallDirPath()
-}
-
 // loadExistingInstallation loads the existing installation state
 func (pm *PackageManager) loadExistingInstallation() error {
 	if !pm.isExistingInstallation() {
@@ -261,7 +298,7 @@ func (pm *PackageManager) loadExistingInstallation() error {
 	}
 
 	if err := pm.checkBinariesExistAndLoad(); err != nil {
-		return fmt.Errorf("installation validation failed: %w", err)
+		return fmt.Errorf("installation failed: %w", err)
 	}
 
 	return nil
@@ -300,12 +337,8 @@ func (pm *PackageManager) isExistingInstallation() bool {
 		return len(pm.loadedBlocks) > 0
 	}
 
-	metadataDir := filepath.Join(pm.InstallDir, "metadata")
-	if _, err := os.Stat(metadataDir); err != nil {
-		return false
-	}
-
-	files, err := os.ReadDir(metadataDir)
+	// Check if any block directory contains metadata files
+	files, err := os.ReadDir(pm.InstallDir)
 	if err != nil {
 		return false
 	}
@@ -313,8 +346,9 @@ func (pm *PackageManager) isExistingInstallation() bool {
 	// If any block directory contains a versioned metadata file, it's an existing installation
 	for _, file := range files {
 		if file.IsDir() {
-			blockDir := filepath.Join(metadataDir, file.Name())
-			entries, _ := os.ReadDir(blockDir)
+			blockDir := filepath.Join(pm.InstallDir, file.Name())
+			metadataDir := filepath.Join(blockDir, "metadata")
+			entries, _ := os.ReadDir(metadataDir)
 			for _, e := range entries {
 				if !e.IsDir() && strings.HasSuffix(e.Name(), ".json") {
 					return true
@@ -328,12 +362,12 @@ func (pm *PackageManager) isExistingInstallation() bool {
 
 // list returns all installed blocks
 func (pm *PackageManager) list() (*listResult, error) {
-	metadataDir := filepath.Join(pm.InstallDir, "metadata")
-	if err := os.MkdirAll(metadataDir, 0755); err != nil {
+	// TODO: We likely don't want to do this on every call, make it a separate set up step instead.
+	if err := os.MkdirAll(pm.InstallDir, 0755); err != nil {
 		return nil, err
 	}
 
-	files, err := os.ReadDir(metadataDir)
+	files, err := os.ReadDir(pm.InstallDir)
 	if err != nil {
 		return nil, err
 	}

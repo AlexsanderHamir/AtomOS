@@ -10,8 +10,22 @@ import (
 // NewPackageManager creates a new package manager instance
 // If the hidden atoms directory already exists, it will be loaded from that directory
 func NewPackageManager() *PackageManager {
-	installDir := getDefaultInstallDirPath()
-	cacheDir := getDefaultCacheDirPath(installDir)
+	return NewPackageManagerWithTestDir("")
+}
+
+// NewPackageManagerWithTestDir creates a new package manager instance with a custom test directory
+// If testDir is empty, it uses the default behavior (home directory)
+// If testDir is provided, it creates the hidden directory under the test directory for testing purposes
+func NewPackageManagerWithTestDir(testDir string) *PackageManager {
+	var installDir string
+
+	if testDir != "" {
+		// Testing mode: create hidden directory under the provided test directory
+		installDir = filepath.Join(testDir, getDefaultInstallDirPathName)
+	} else {
+		// Normal mode: use default home directory
+		installDir = getDefaultInstallDirPath()
+	}
 
 	var dirExists bool
 	if _, err := os.Stat(installDir); err == nil {
@@ -20,7 +34,6 @@ func NewPackageManager() *PackageManager {
 
 	pm := &PackageManager{
 		InstallDir: installDir,
-		CacheDir:   cacheDir,
 	}
 
 	if dirExists {
@@ -31,7 +44,6 @@ func NewPackageManager() *PackageManager {
 	}
 
 	os.MkdirAll(installDir, 0755)
-	os.MkdirAll(cacheDir, 0755)
 
 	return pm
 }
@@ -45,7 +57,6 @@ func (pm *PackageManager) Install(req InstallRequest) (*BlockMetadata, error) {
 
 	if !req.Force {
 		if pm.isBlockInstalled(blockInfo.Name) {
-			// Return existing metadata if already installed
 			metadata, metaErr := pm.getMetadata(blockInfo.Name)
 			if metaErr != nil {
 				return nil, fmt.Errorf("block '%s' is already installed but failed to read metadata: %w", blockInfo.Name, metaErr)
@@ -76,7 +87,7 @@ func (pm *PackageManager) Install(req InstallRequest) (*BlockMetadata, error) {
 		InstalledAt: time.Now(),
 		LastUpdated: time.Now(),
 		IsActive:    true,
-		LSPEntries:  blockInfo.LSP.Entries,
+		LSPEntries:  convertEntriesToMap(blockInfo.Entries),
 	}
 
 	if err := pm.storeMetadata(metadata); err != nil {
@@ -156,7 +167,7 @@ func (pm *PackageManager) Update(req UpdateRequest) (*UpdateResult, error) {
 	metadata.Version = version
 	metadata.BinaryPath = binaryPath
 	metadata.LastUpdated = time.Now()
-	metadata.LSPEntries = blockInfo.LSP.Entries
+	metadata.LSPEntries = convertEntriesToMap(blockInfo.Entries)
 
 	if err := pm.storeMetadata(metadata); err != nil {
 		return &UpdateResult{
@@ -185,13 +196,13 @@ func (pm *PackageManager) Uninstall(blockName string) error {
 		return fmt.Errorf("failed to remove binary: %v", err)
 	}
 
-	metadataPath := filepath.Join(pm.InstallDir, "metadata", blockName, fmt.Sprintf("%s.json", metadata.Version))
+	metadataPath := filepath.Join(pm.InstallDir, blockName, "metadata", fmt.Sprintf("%s.json", metadata.Version))
 	if err := os.Remove(metadataPath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove metadata: %v", err)
 	}
 
 	// Attempt to remove block directory if empty
-	_ = os.Remove(filepath.Join(pm.InstallDir, "metadata", blockName))
+	_ = os.Remove(filepath.Join(pm.InstallDir, blockName))
 
 	return nil
 }

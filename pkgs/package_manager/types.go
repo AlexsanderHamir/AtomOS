@@ -32,7 +32,6 @@ type UpdateRequest struct {
 // PackageManager handles block installation, updates, and management
 type PackageManager struct {
 	InstallDir string
-	CacheDir   string
 	// Loaded state from existing installation
 	loadedBlocks map[string]BlockMetadata // Cached map of installed blocks by name
 	isLoaded     bool                     // Whether the installation has been loaded
@@ -51,10 +50,8 @@ type BlockInfo struct {
 		From   string            `yaml:"from"`
 		Assets map[string]string `yaml:"assets"`
 	} `yaml:"binary"`
-	LSP struct {
-		Entries map[string]Entry `yaml:"entries"`
-	} `yaml:"lsp"`
-	BinaryPath string // Path to the downloaded binary
+	Entries    []Entry `yaml:"entries"`
+	BinaryPath string  // Path to the downloaded binary
 }
 
 // Entry represents a CLI entry from the block
@@ -126,7 +123,6 @@ type listResult struct {
 // InstallationStats represents statistics about the package manager installation
 type InstallationStats struct {
 	InstallDir      string          `json:"install_dir"`
-	CacheDir        string          `json:"cache_dir"`
 	IsExisting      bool            `json:"is_existing"`
 	TotalBlocks     int             `json:"total_blocks"`
 	TotalBinarySize int64           `json:"total_binary_size"`
