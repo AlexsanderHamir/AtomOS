@@ -1,8 +1,6 @@
 package packagemanager
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,13 +8,13 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
 // fetchBlockInfo fetches the agentic_support.yaml file from the repository
 func (pm *PackageManager) fetchBlockInfo(repo string) (*BlockInfo, error) {
-	// Construct the raw GitHub URL for the agentic_support.yaml file
 	rawURL := fmt.Sprintf("https://raw.githubusercontent.com/%s/main/agentic_support.yaml", repo)
 
 	// Try main branch first
@@ -40,13 +38,11 @@ func (pm *PackageManager) fetchBlockInfo(repo string) (*BlockInfo, error) {
 		return nil, fmt.Errorf("failed to fetch agentic_support.yaml: HTTP %d", resp.StatusCode)
 	}
 
-	// Read the response body
 	content, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	// Parse the YAML content
 	var blockInfo BlockInfo
 	if err := yaml.Unmarshal(content, &blockInfo); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
@@ -77,8 +73,8 @@ func (pm *PackageManager) getLatestRelease(repo string) (*GitHubRelease, error) 
 	return &release, nil
 }
 
-// downloadAndVerifyBinary downloads a binary and verifies its SHA256 hash
-func (pm *PackageManager) downloadAndVerifyBinary(repo, version string, blockInfo *BlockInfo) (string, string, error) {
+// downloadBinary downloads a binary for the current platform
+func (pm *PackageManager) downloadBinary(repo, version string, blockInfo *BlockInfo) (string, error) {
 	osName := runtime.GOOS
 	arch := runtime.GOARCH
 
@@ -92,13 +88,13 @@ func (pm *PackageManager) downloadAndVerifyBinary(repo, version string, blockInf
 
 	binaryName, exists := blockInfo.Binary.Assets[platformKey]
 	if !exists {
-		return "", "", fmt.Errorf("no binary found for platform %s", platformKey)
+		return "", fmt.Errorf("no binary found for platform %s", platformKey)
 	}
 
-	// Create per-block directory under the user's bin namespace, e.g., ~/bin/atomos/<block>
-	installDir := filepath.Join(defaultBinaryBaseDir(), blockInfo.Name)
+	// Create per-block and per-version directory under the user's namespace, e.g., ~/.atomos/<block>/<version>
+	installDir := filepath.Join(defaultBinaryBaseDir(), blockInfo.Name, version)
 	if err := os.MkdirAll(installDir, 0755); err != nil {
-		return "", "", fmt.Errorf("failed to create install directory: %w", err)
+		return "", fmt.Errorf("failed to create install directory: %w", err)
 	}
 
 	// Construct the local file path
@@ -109,41 +105,35 @@ func (pm *PackageManager) downloadAndVerifyBinary(repo, version string, blockInf
 
 	resp, err := http.Get(downloadURL)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to download binary: %w", err)
+		return "", fmt.Errorf("failed to download binary: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", "", fmt.Errorf("failed to download binary: HTTP %d", resp.StatusCode)
+		return "", fmt.Errorf("failed to download binary: HTTP %d", resp.StatusCode)
 	}
 
 	// Create the local file
 	file, err := os.Create(localPath)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to create local file: %w", err)
+		return "", fmt.Errorf("failed to create local file: %w", err)
 	}
 	defer file.Close()
 
-	// Copy the downloaded content to the file and calculate SHA256
-	hash := sha256.New()
-	teeReader := io.TeeReader(resp.Body, hash)
-
-	_, err = io.Copy(file, teeReader)
+	// Copy the downloaded content to the file
+	_, err = io.Copy(file, resp.Body)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to write binary to file: %w", err)
+		return "", fmt.Errorf("failed to write binary to file: %w", err)
 	}
-
-	// Get the SHA256 hash
-	sha256Hash := hex.EncodeToString(hash.Sum(nil))
 
 	// Make the binary executable on Unix-like systems
 	if osName != "windows" {
 		if err := os.Chmod(localPath, 0755); err != nil {
-			return "", "", fmt.Errorf("failed to make binary executable: %w", err)
+			return "", fmt.Errorf("failed to make binary executable: %w", err)
 		}
 	}
 
-	return localPath, sha256Hash, nil
+	return localPath, nil
 }
 
 // isBlockInstalled checks if a block is already installed
@@ -161,7 +151,6 @@ func (pm *PackageManager) storeMetadata(metadata *BlockMetadata) error {
 	}
 
 	metadataPath := filepath.Join(metadataDir, fmt.Sprintf("%s.json", metadata.Name))
-
 	file, err := os.Create(metadataPath)
 	if err != nil {
 		return fmt.Errorf("failed to create metadata file: %w", err)
@@ -231,29 +220,37 @@ func defaultBinaryBaseDir() string {
 
 // loadExistingInstallation loads the existing installation state
 func (pm *PackageManager) loadExistingInstallation() error {
-	if !pm.IsExistingInstallation() {
+	if !pm.isExistingInstallation() {
 		return nil
 	}
 
-	// Validate the existing installation to ensure it's in a good state
-	if err := pm.checkBinariesExist(); err != nil {
+	if err := pm.checkBinariesExistAndLoad(); err != nil {
 		return fmt.Errorf("installation validation failed: %w", err)
 	}
 
-	// Load all existing metadata into memory for faster access
+	return nil
+}
+
+// checkBinariesExistAndLoad verifies that binaries referenced by installed blocks exist,
+// and loads their metadata into memory if they do.
+func (pm *PackageManager) checkBinariesExistAndLoad() error {
 	listResult, err := pm.List()
 	if err != nil {
-		return fmt.Errorf("failed to load existing blocks: %w", err)
+		return fmt.Errorf("failed to list installed blocks: %w", err)
 	}
 
-	// Store the loaded blocks in memory as a map for fast lookups
 	pm.loadedBlocks = make(map[string]BlockMetadata)
 	for _, block := range listResult.Blocks {
-		pm.loadedBlocks[block.Name] = block
-	}
-	pm.isLoaded = true
+		if _, err := os.Stat(block.BinaryPath); os.IsNotExist(err) {
+			return fmt.Errorf("block '%s' metadata exists but binary is missing: %s", block.Name, block.BinaryPath)
+		}
 
-	// Log the loaded installation state
+		for _, block := range listResult.Blocks {
+			pm.loadedBlocks[block.Name] = block
+		}
+	}
+
+	pm.isLoaded = true
 	if len(listResult.Blocks) > 0 {
 		fmt.Printf("Loaded existing AtomOS installation with %d blocks\n", len(listResult.Blocks))
 	}
@@ -261,18 +258,28 @@ func (pm *PackageManager) loadExistingInstallation() error {
 	return nil
 }
 
-// checkBinariesExist checks if the existing blocks have valid binaries.
-func (pm *PackageManager) checkBinariesExist() error {
-	listResult, err := pm.List()
-	if err != nil {
-		return fmt.Errorf("failed to list installed blocks: %w", err)
+// isExistingInstallation checks if this package manager is working with an existing installation
+func (pm *PackageManager) isExistingInstallation() bool {
+	if pm.isLoaded {
+		return len(pm.loadedBlocks) > 0
 	}
 
-	for _, block := range listResult.Blocks {
-		if _, err := os.Stat(block.BinaryPath); os.IsNotExist(err) {
-			return fmt.Errorf("block '%s' metadata exists but binary is missing: %s", block.Name, block.BinaryPath)
+	metadataDir := filepath.Join(pm.InstallDir, "metadata")
+	if _, err := os.Stat(metadataDir); err != nil {
+		return false
+	}
+
+	files, err := os.ReadDir(metadataDir)
+	if err != nil {
+		return false
+	}
+
+	// If there are any .json files in the metadata directory, it's an existing installation
+	for _, file := range files {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".json") {
+			return true
 		}
 	}
 
-	return nil
+	return false
 }

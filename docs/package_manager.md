@@ -1,11 +1,11 @@
 # AtomOS Package Manager
 
-A simple package manager for AtomOS blocks that can download, store, delete, and update binary blocks from GitHub repositories with SHA256 verification.
+A simple package manager for AtomOS blocks that can download, store, delete, and update binary blocks from GitHub repositories.
 
 ## Features
 
 - **Download and Install**: Download blocks from GitHub repositories
-- **SHA256 Verification**: Verify downloaded binaries against their SHA256 hashes
+- **Simple Downloads**: Download binaries directly from GitHub releases
 - **Update Management**: Update installed blocks to newer versions
 - **Clean Uninstall**: Remove blocks and clean up all associated files
 - **Metadata Tracking**: Track installation metadata including versions and timestamps
@@ -28,12 +28,12 @@ A simple package manager for AtomOS blocks that can download, store, delete, and
 
 ### Installation Management Methods
 
-- `IsExistingInstallation() bool` - Checks if this is an existing installation
+- `isExistingInstallation() bool` - Checks if this is an existing installation
 - `IsLoaded() bool` - Checks if the installation has been loaded into memory
 - `GetLoadedBlocks() []BlockMetadata` - Returns the blocks loaded from existing installation
 - `GetLoadedBlock(blockName string) (BlockMetadata, bool)` - Returns a specific block by name from loaded installation
 - `IsBlockLoaded(blockName string) bool` - Checks if a specific block is loaded in memory
-- `checkBinariesExist() error` - Validates the integrity of an existing installation
+- `checkBinariesExistAndLoad() error` - Validates the integrity of an existing installation
 - `GetInstallationStats() (*InstallationStats, error)` - Gets detailed installation statistics
 
 ## Installation Management
@@ -120,7 +120,7 @@ func main() {
     pm := package_manager.NewPackageManager()
 
         // Check if this is an existing installation
-    if pm.IsExistingInstallation() {
+    if pm.isExistingInstallation() {
         fmt.Println("Loading existing AtomOS installation...")
 
         // Check if the installation was successfully loaded
@@ -145,7 +145,7 @@ func main() {
         }
 
         // Validate the existing installation
-        if err := pm.checkBinariesExist(); err != nil {
+        if err := pm.checkBinariesExistAndLoad(); err != nil {
             fmt.Printf("Warning: Installation validation failed: %v\n", err)
         }
 
@@ -190,7 +190,6 @@ func main() {
 
 ## Security
 
-- All downloaded binaries are verified against their SHA256 hashes
 - Binaries are stored in isolated directories per block
 - Metadata is stored separately from binaries for easy cleanup
 
@@ -200,7 +199,6 @@ The package manager provides detailed error messages for common issues:
 
 - Repository not found
 - Binary not available for current platform
-- SHA256 verification failed
 - Network connectivity issues
 - Permission errors
 

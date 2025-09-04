@@ -10,7 +10,6 @@ type BlockMetadata struct {
 	Version     string    `json:"version"`
 	SourceRepo  string    `json:"source_repo"`
 	BinaryPath  string    `json:"binary_path"`
-	SHA256      string    `json:"sha256"`
 	InstalledAt time.Time `json:"installed_at"`
 	LastUpdated time.Time `json:"last_updated"`
 	IsActive    bool      `json:"is_active"`
@@ -25,8 +24,8 @@ type InstallRequest struct {
 
 // UpdateRequest represents a request to update a block
 type UpdateRequest struct {
-	Name    string `json:"name"`
-	Version string `json:"version"` // If empty, will check for latest
+	BlockName string `json:"block_name"`
+	Version   string `json:"version"` // If empty, will check for latest
 }
 
 // PackageManager handles block installation, updates, and management
