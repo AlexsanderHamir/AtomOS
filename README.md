@@ -14,11 +14,6 @@ Think of it as **n8n, but for AI agents**, turning existing OSS libraries into c
 - Enable reusable, testable, and standardized workflows.
 - Create a registry of blocks and workflows that any AI system can import and execute.
 
-## Status
-
-AtomOS is currently under development. Expect rapid iteration and updates, contributors are welcome !!
-
 ## License
 
-[Apache 2.0](LICENSE)
-
+[Custom License](LICENSE)

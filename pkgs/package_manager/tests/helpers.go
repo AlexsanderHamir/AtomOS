@@ -11,6 +11,8 @@ import (
 	packagemanager "github.com/AlexsanderHamir/AtomOS/pkgs/package_manager"
 )
 
+const expectedLSPEntriesNum = 3
+
 var expectedLSPEntries = map[string]packagemanager.Entry{
 	"run": {
 		Name:        "run",
@@ -210,7 +212,7 @@ func verifyLSPEntryOutputs(t *testing.T, entryName string, entry, expectedEntry 
 }
 
 func verifyLSPEntries(t *testing.T, blockMetaData *packagemanager.BlockMetadata) {
-	if len(blockMetaData.LSPEntries) == 0 || len(blockMetaData.LSPEntries) < 3 {
+	if len(blockMetaData.LSPEntries) < expectedLSPEntriesNum {
 		t.Fatal("missing lsp entries")
 	}
 

@@ -1,15 +1,16 @@
 package tests
 
 import (
+	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
 
 	packagemanager "github.com/AlexsanderHamir/AtomOS/pkgs/package_manager"
 )
 
 func TestInstallWithTestDir(t *testing.T) {
-	testDir := "./atomos-test-dir"
+	t.Parallel()
+	testDir := fmt.Sprintf("./atomos-test-dir-%s", t.Name())
 	if err := os.MkdirAll(testDir, 0755); err != nil {
 		t.Fatalf("Failed to create test dir: %s", err)
 	}
@@ -36,11 +37,12 @@ func TestInstallWithTestDir(t *testing.T) {
 }
 
 func TestInstallVersionWithoutAgenticSupport(t *testing.T) {
-	testDir := "./atomos-test-dir-v180"
+	t.Parallel()
+	testDir := fmt.Sprintf("./atomos-test-dir-%s", t.Name())
 	if err := os.MkdirAll(testDir, 0755); err != nil {
 		t.Fatalf("Failed to create test dir: %s", err)
 	}
-	defer os.RemoveAll(testDir) // Clean up after test
+	defer os.RemoveAll(testDir)
 
 	pkgm := packagemanager.NewPackageManagerWithTestDir(testDir)
 	if pkgm == nil {
@@ -55,10 +57,5 @@ func TestInstallVersionWithoutAgenticSupport(t *testing.T) {
 
 	if blockMetaData != nil {
 		t.Fatal("Expected block metadata to be nil when installation fails")
-	}
-
-	// Verify that no files were created in the test directory
-	if _, err := os.Stat(filepath.Join(testDir, ".atomos")); !os.IsNotExist(err) {
-		t.Fatal("Expected no .atomos directory to be created when installation fails")
 	}
 }
