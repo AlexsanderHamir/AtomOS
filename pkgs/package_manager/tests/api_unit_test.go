@@ -51,8 +51,21 @@ func TestInstallWithTestDir(t *testing.T) {
 		}
 
 		CompareBlockMetadata(t, blockMetaData, newBlockMetadata)
+
+		t.Run("GetUnknownBlock", func(t *testing.T) {
+			newBlockMetadata, ok := pkgm.GetLoadedBlock("fake_block")
+			if ok {
+				t.Fatal("block shouldn't be present")
+			}
+
+			if newBlockMetadata != nil {
+				t.Fatal("block metadata should be nil")
+			}
+		})
 	})
 
+
+	
 }
 
 func TestInstallVersionWithoutAgenticSupport(t *testing.T) {
