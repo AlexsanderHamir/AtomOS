@@ -2,7 +2,7 @@ package workflows
 
 // Workflow represents the top-level workflow definition parsed from YAML.
 // It includes metadata, a list of blocks, and the connections between them.
-type Workflow struct {
+type RawWorkflow struct {
 	Name        string       `yaml:"workflow_name"`
 	Version     string       `yaml:"version"`
 	Description string       `yaml:"description"`
@@ -15,6 +15,7 @@ type Block struct {
 	Name    string `yaml:"name"`
 	Version string `yaml:"version"`
 	GitHub  string `yaml:"github"`
+	Force   bool   `yaml:"force"`
 }
 
 // Connection wires outputs from one block entry to inputs of another block entry.
