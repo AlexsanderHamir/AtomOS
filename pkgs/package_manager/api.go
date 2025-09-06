@@ -33,7 +33,8 @@ func NewPackageManagerWithTestDir(testDir string) *PackageManager {
 	}
 
 	pm := &PackageManager{
-		InstallDir: installDir,
+		InstallDir:   installDir,
+		loadedBlocks: make(map[string]*BlockMetadata),
 	}
 
 	if dirExists {
@@ -94,13 +95,15 @@ func (pm *PackageManager) Install(req InstallRequest) (*BlockMetadata, error) {
 		return nil, fmt.Errorf("failed to store metadata: %w", err)
 	}
 
+	pm.loadedBlocks[metadata.Name] = metadata
+
 	return metadata, nil
 }
 
 // GetLoadedBlock returns a specific block by name from the loaded installation
-func (pm *PackageManager) GetLoadedBlock(blockName string) (BlockMetadata, bool) {
-	if !pm.isLoaded {
-		return BlockMetadata{}, false
+func (pm *PackageManager) GetLoadedBlock(blockName string) (*BlockMetadata, bool) {
+	if pm.loadedBlocks == nil {
+		return nil, false
 	}
 	block, exists := pm.loadedBlocks[blockName]
 	return block, exists
@@ -176,6 +179,8 @@ func (pm *PackageManager) Update(req UpdateRequest) (*UpdateResult, error) {
 		}, err
 	}
 
+	pm.loadedBlocks[metadata.Name] = metadata
+
 	return &UpdateResult{
 		Success:    true,
 		Message:    fmt.Sprintf("Successfully updated block '%s' from %s to %s", req.BlockName, oldVersion, version),
@@ -203,6 +208,11 @@ func (pm *PackageManager) Uninstall(blockName string) error {
 
 	// Attempt to remove block directory if empty
 	_ = os.Remove(filepath.Join(pm.InstallDir, blockName))
+
+	// Remove from loaded blocks if the package manager is loaded
+	if pm.loadedBlocks != nil {
+		delete(pm.loadedBlocks, blockName)
+	}
 
 	return nil
 }

@@ -33,8 +33,7 @@ type UpdateRequest struct {
 type PackageManager struct {
 	InstallDir string
 	// Loaded state from existing installation
-	loadedBlocks map[string]BlockMetadata // Cached map of installed blocks by name
-	isLoaded     bool                     // Whether the installation has been loaded
+	loadedBlocks map[string]*BlockMetadata // Cached map of installed blocks by name
 }
 
 // BlockInfo represents the information from agentic_support.yaml

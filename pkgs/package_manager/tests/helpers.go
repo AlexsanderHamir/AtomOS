@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	packagemanager "github.com/AlexsanderHamir/AtomOS/pkgs/package_manager"
 )
@@ -229,5 +230,85 @@ func verifyLSPEntries(t *testing.T, blockMetaData *packagemanager.BlockMetadata)
 
 	if len(blockMetaData.LSPEntries) != len(expectedLSPEntries) {
 		t.Fatalf("LSP entries count mismatch: expected=%d, got=%d", len(expectedLSPEntries), len(blockMetaData.LSPEntries))
+	}
+}
+
+// CompareBlockMetadata compares two BlockMetadata instances for equality
+func CompareBlockMetadata(t *testing.T, original, retrieved *packagemanager.BlockMetadata) {
+	if original == nil || retrieved == nil {
+		t.Fatal("Both block metadata instances must be non-nil")
+	}
+
+	if original.Name != retrieved.Name {
+		t.Errorf("Name mismatch: expected %s, got %s", original.Name, retrieved.Name)
+	}
+
+	if original.Version != retrieved.Version {
+		t.Errorf("Version mismatch: expected %s, got %s", original.Version, retrieved.Version)
+	}
+
+	if original.SourceRepo != retrieved.SourceRepo {
+		t.Errorf("SourceRepo mismatch: expected %s, got %s", original.SourceRepo, retrieved.SourceRepo)
+	}
+
+	if original.BinaryPath != retrieved.BinaryPath {
+		t.Errorf("BinaryPath mismatch: expected %s, got %s", original.BinaryPath, retrieved.BinaryPath)
+	}
+
+	if original.IsActive != retrieved.IsActive {
+		t.Errorf("IsActive mismatch: expected %t, got %t", original.IsActive, retrieved.IsActive)
+	}
+
+	// Compare timestamps using the existing helper function
+	CompareBlockTimestamps(t, original, retrieved)
+
+	// Compare LSP entries
+	if len(original.LSPEntries) != len(retrieved.LSPEntries) {
+		t.Errorf("LSPEntries count mismatch: expected %d, got %d", len(original.LSPEntries), len(retrieved.LSPEntries))
+	}
+
+	for name, originalEntry := range original.LSPEntries {
+		retrievedEntry, exists := retrieved.LSPEntries[name]
+		if !exists {
+			t.Errorf("LSP entry %s missing in retrieved metadata", name)
+			continue
+		}
+
+		if originalEntry.Name != retrievedEntry.Name {
+			t.Errorf("LSP entry %s name mismatch: expected %s, got %s", name, originalEntry.Name, retrievedEntry.Name)
+		}
+
+		if originalEntry.Command != retrievedEntry.Command {
+			t.Errorf("LSP entry %s command mismatch: expected %s, got %s", name, originalEntry.Command, retrievedEntry.Command)
+		}
+
+		if originalEntry.Description != retrievedEntry.Description {
+			t.Errorf("LSP entry %s description mismatch: expected %s, got %s", name, originalEntry.Description, retrievedEntry.Description)
+		}
+	}
+}
+
+// CompareBlockTimestamps compares the timestamp fields of two BlockMetadata instances
+func CompareBlockTimestamps(t *testing.T, original, retrieved *packagemanager.BlockMetadata) {
+	if original == nil || retrieved == nil {
+		t.Fatal("Both block metadata instances must be non-nil")
+	}
+
+	// InstalledAt should be the same (or very close)
+	timeDiff := original.InstalledAt.Sub(retrieved.InstalledAt)
+	if timeDiff < 0 {
+		timeDiff = -timeDiff
+	}
+	if timeDiff > time.Second {
+		t.Errorf("InstalledAt time difference too large: %v", timeDiff)
+	}
+
+	// LastUpdated should be the same (or very close)
+	timeDiff = original.LastUpdated.Sub(retrieved.LastUpdated)
+	if timeDiff < 0 {
+		timeDiff = -timeDiff
+	}
+	if timeDiff > time.Second {
+		t.Errorf("LastUpdated time difference too large: %v", timeDiff)
 	}
 }

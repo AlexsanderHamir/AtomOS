@@ -312,18 +312,16 @@ func (pm *PackageManager) checkBinariesExistAndLoad() error {
 		return fmt.Errorf("failed to list installed blocks: %w", err)
 	}
 
-	pm.loadedBlocks = make(map[string]BlockMetadata)
 	for _, block := range listResult.Blocks {
 		if _, err := os.Stat(block.BinaryPath); os.IsNotExist(err) {
 			return fmt.Errorf("block '%s' metadata exists but binary is missing: %s", block.Name, block.BinaryPath)
 		}
 
 		for _, block := range listResult.Blocks {
-			pm.loadedBlocks[block.Name] = block
+			pm.loadedBlocks[block.Name] = &block
 		}
 	}
 
-	pm.isLoaded = true
 	if len(listResult.Blocks) > 0 {
 		fmt.Printf("Loaded existing AtomOS installation with %d blocks\n", len(listResult.Blocks))
 	}
@@ -333,7 +331,7 @@ func (pm *PackageManager) checkBinariesExistAndLoad() error {
 
 // isExistingInstallation checks if this package manager is working with an existing installation
 func (pm *PackageManager) isExistingInstallation() bool {
-	if pm.isLoaded {
+	if pm.loadedBlocks != nil {
 		return len(pm.loadedBlocks) > 0
 	}
 

@@ -21,19 +21,38 @@ func TestInstallWithTestDir(t *testing.T) {
 		t.Fatal("package manager can't be nil")
 	}
 
-	installReq := packagemanager.InstallRequest{Repo: "AlexsanderHamir/prof", Version: "1.8.1"}
-	blockMetaData, err := pkgm.Install(installReq)
-	if err != nil {
-		t.Fatalf("pkgm.Install() failed: %s", err)
-	}
-	if blockMetaData == nil {
-		t.Fatal("block metadata can't be nil")
-	}
+	var blockMetaData *packagemanager.BlockMetadata
 
-	verifyDirectoryStructure(t, testDir)
-	verifyMetadataFile(t, testDir, blockMetaData)
-	verifyBinaryExecution(t, blockMetaData)
-	verifyLSPEntries(t, blockMetaData)
+	t.Run("InstallBlock", func(t *testing.T) {
+		var err error
+		installReq := packagemanager.InstallRequest{Repo: "AlexsanderHamir/prof", Version: "1.8.1"}
+		blockMetaData, err = pkgm.Install(installReq)
+		if err != nil {
+			t.Fatalf("pkgm.Install() failed: %s", err)
+		}
+		if blockMetaData == nil {
+			t.Fatal("block metadata can't be nil")
+		}
+
+		verifyDirectoryStructure(t, testDir)
+		verifyMetadataFile(t, testDir, blockMetaData)
+		verifyBinaryExecution(t, blockMetaData)
+		verifyLSPEntries(t, blockMetaData)
+	})
+
+	t.Run("GetBlock", func(t *testing.T) {
+		newBlockMetadata, ok := pkgm.GetLoadedBlock(blockMetaData.Name)
+		if !ok {
+			t.Fatal("block should be present")
+		}
+
+		if newBlockMetadata == nil {
+			t.Fatal("block metadata can't be nil")
+		}
+
+		CompareBlockMetadata(t, blockMetaData, newBlockMetadata)
+	})
+
 }
 
 func TestInstallVersionWithoutAgenticSupport(t *testing.T) {
