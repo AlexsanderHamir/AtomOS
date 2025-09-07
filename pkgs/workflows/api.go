@@ -1,25 +1,19 @@
 package workflows
 
 import (
+	"errors"
 	"fmt"
 
 	packagemanager "github.com/AlexsanderHamir/AtomOS/pkgs/package_manager"
 	"github.com/dominikbraun/graph"
 )
 
-type blockname string
-type workflowname string
-type WorkflowManager struct {
-	pkgmanager *packagemanager.PackageManager
-	metadata   map[blockname]*packagemanager.BlockMetadata
-	workflows  map[workflowname]graph.Graph[string, *Block]
-}
-
 // NewWorkflowManager creates and returns a new WorkflowManager with a default PackageManager.
-func NewWorkflowManager() *WorkflowManager {
+func NewWorkflowManager(path string) *WorkflowManager {
 	return &WorkflowManager{
-		pkgmanager: packagemanager.NewPackageManager(),
+		pkgmanager: packagemanager.NewPackageManagerWithTestDir(path),
 		metadata:   map[blockname]*packagemanager.BlockMetadata{},
+		workflows:  map[workflowname]graph.Graph[string, *Block]{},
 	}
 }
 
@@ -50,23 +44,102 @@ func (wm *WorkflowManager) CompileWorkflow(workflowPath string) error {
 	return nil
 }
 
-// GetMetadata returns the metadata for a specific block
-func (wm *WorkflowManager) GetMetadata(blockName string) (*packagemanager.BlockMetadata, bool) {
-	metadata, exists := wm.metadata[blockname(blockName)]
-	return metadata, exists
-}
+// BFS traversal with connection access
+func (wm *WorkflowManager) RunWorkFlow(wfn workflowname) error {
+	g := wm.workflows[wfn]
 
-// GetWorkflow returns the workflow graph for a specific workflow name
-func (wm *WorkflowManager) GetWorkflow(workflowName string) (graph.Graph[string, *Block], bool) {
-	workflow, exists := wm.workflows[workflowname(workflowName)]
-	return workflow, exists
-}
-
-// GetAllMetadata returns all stored block metadata
-func (wm *WorkflowManager) GetAllMetadata() map[string]*packagemanager.BlockMetadata {
-	result := make(map[string]*packagemanager.BlockMetadata)
-	for blockName, metadata := range wm.metadata {
-		result[string(blockName)] = metadata
+	startNode := findRootNode(g)
+	if startNode == "" {
+		return errors.New("no root node found")
 	}
-	return result
+
+	fmt.Println("=== BFS TRAVERSAL ===")
+	fmt.Printf("Starting from: %s\n", startNode)
+
+	visited := make(map[string]bool)
+	queue := []string{startNode}
+	level := 0
+
+	adjacencyMap, err := g.AdjacencyMap()
+	if err != nil {
+		return fmt.Errorf("error getting adjacency map: %v", err)
+	}
+
+	for len(queue) > 0 {
+		levelSize := len(queue)
+		fmt.Printf("Level %d: ", level)
+
+		for range levelSize {
+			currentNode := queue[0]
+			queue = queue[1:]
+
+			if visited[currentNode] {
+				continue
+			}
+			visited[currentNode] = true
+
+			block, err := g.Vertex(currentNode)
+			if err != nil {
+				return fmt.Errorf("error getting block %s: %v", currentNode, err)
+			}
+
+			fmt.Printf("%s ", block.Name)
+
+			incomingConnections, incomingFromBlocks := getIncoming(adjacencyMap, currentNode)
+			outgoingConnections, outgoingToBlocks := getOutGoing(adjacencyMap, currentNode)
+
+			blockMetadata := wm.metadata[blockname(block.Name)]
+			excArgs := ExecuteArgs{block, blockMetadata, incomingConnections, incomingFromBlocks, outgoingConnections, outgoingToBlocks}
+
+			err = wm.executeBlock(excArgs)
+			if err != nil {
+				return fmt.Errorf("error executing block %s: %v", block.Name, err)
+			}
+
+			for target := range adjacencyMap[currentNode] {
+				if !visited[target] {
+					queue = append(queue, target)
+				}
+			}
+		}
+		fmt.Println()
+		level++
+	}
+
+	return nil
+}
+
+// Execute block with access to all connections
+func (wm *WorkflowManager) executeBlock(excArgs ExecuteArgs) error {
+
+	fmt.Printf("\n  Executing: %s\n", excArgs.block.Name)
+
+	// Show incoming connections
+	fmt.Printf("    Inputs (%d):\n", len(excArgs.incon))
+	for i, edge := range excArgs.incon {
+		fmt.Printf("      %s -> %s (%s->%s)\n",
+			excArgs.inblock[i], excArgs.block.Name,
+			edge.Properties.Attributes["output"],
+			edge.Properties.Attributes["input"])
+	}
+
+	// Show outgoing connections
+	fmt.Printf("    Outputs (%d):\n", len(excArgs.outcon))
+	for i, edge := range excArgs.outcon {
+		fmt.Printf("      %s -> %s (%s->%s)\n",
+			excArgs.block.Name, excArgs.outblock[i],
+			edge.Properties.Attributes["output"],
+			edge.Properties.Attributes["input"])
+	}
+
+	// Your block execution logic here
+	// You now have access to:
+	// - block: the current block
+	// - metadata: block metadata
+	// - incomingConnections: edges coming in
+	// - incomingFromBlocks: source block names
+	// - outgoingConnections: edges going out
+	// - outgoingToBlocks: target block names
+
+	return nil
 }

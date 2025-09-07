@@ -2,6 +2,7 @@ package packagemanager
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -62,6 +63,7 @@ func (pm *PackageManager) Install(req InstallRequest) (*BlockMetadata, error) {
 			if metaErr != nil {
 				return nil, fmt.Errorf("block '%s' is already installed but failed to read metadata: %w", blockInfo.Name, metaErr)
 			}
+			log.Printf("%s coming from cache", blockInfo.Name)
 			return metadata, nil
 		}
 	}

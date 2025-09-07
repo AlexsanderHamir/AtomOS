@@ -38,8 +38,58 @@ func buildGraph(rwf *RawWorkflow) graph.Graph[string, *Block] {
 			graph.EdgeAttribute("output", connection.Output),
 			graph.EdgeAttribute("toEntry", connection.ToEntry),
 			graph.EdgeAttribute("input", connection.Input),
+			graph.EdgeAttribute("source", connection.Source),
 		)
 	}
 
 	return g
+}
+
+func findRootNode(g graph.Graph[string, *Block]) string {
+	adjacencyMap, err := g.AdjacencyMap()
+	if err != nil {
+		return ""
+	}
+
+	hasIncomingEdge := make(map[string]bool)
+	for _, targets := range adjacencyMap {
+		for target := range targets {
+			hasIncomingEdge[target] = true
+		}
+	}
+
+	for nodeID := range adjacencyMap {
+		if !hasIncomingEdge[nodeID] {
+			return nodeID
+		}
+	}
+
+	return ""
+}
+
+func getIncoming(adjacencyMap map[string]map[string]graph.Edge[string], currentNode string) ([]graph.Edge[string], []string) {
+	// Get incoming connections
+	var incomingConnections []graph.Edge[string]
+	var incomingFromBlocks []string
+	for sourceNode, targets := range adjacencyMap {
+		if edge, exists := targets[currentNode]; exists {
+			incomingConnections = append(incomingConnections, edge)
+			incomingFromBlocks = append(incomingFromBlocks, sourceNode)
+		}
+	}
+
+	return incomingConnections, incomingFromBlocks
+}
+
+func getOutGoing(adjacencyMap map[string]map[string]graph.Edge[string], currentNode string) ([]graph.Edge[string], []string) {
+	var outgoingConnections []graph.Edge[string]
+	var outgoingToBlocks []string
+	if targets, exists := adjacencyMap[currentNode]; exists {
+		for targetNode, edge := range targets {
+			outgoingConnections = append(outgoingConnections, edge)
+			outgoingToBlocks = append(outgoingToBlocks, targetNode)
+		}
+	}
+
+	return outgoingConnections, outgoingToBlocks
 }
