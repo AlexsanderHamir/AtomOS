@@ -85,26 +85,39 @@ func (pm *PackageManager) getLatestRelease(repo string) (*GitHubRelease, error) 
 // getReleaseByTag fetches a specific GitHub release by tag and is tolerant
 // to tags with or without a leading 'v'.
 func (pm *PackageManager) getReleaseByTag(repo, tag string) (*GitHubRelease, error) {
-	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/v%s", repo, tag)
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch release by tag: %w", err)
+	withV := tag
+	if !strings.HasPrefix(tag, "v") {
+		withV = "v" + tag
 	}
-	defer resp.Body.Close()
+	withoutV := strings.TrimPrefix(tag, "v")
 
-	if resp.StatusCode == http.StatusOK {
-		var release GitHubRelease
-		if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-			return nil, fmt.Errorf("failed to decode release JSON: %w", err)
+	for _, candidate := range []string{withV, withoutV} {
+		url := fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", repo, candidate)
+		resp, err := http.Get(url)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch release by tag '%s': %w", candidate, err)
 		}
-		return &release, nil
+
+		if resp.StatusCode == http.StatusOK {
+			var release GitHubRelease
+			if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+				resp.Body.Close()
+				return nil, fmt.Errorf("failed to decode release JSON: %w", err)
+			}
+			resp.Body.Close()
+			return &release, nil
+		}
+
+		if resp.StatusCode != http.StatusNotFound {
+			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			return nil, fmt.Errorf("failed to fetch release by tag '%s': HTTP %d: %s", candidate, resp.StatusCode, strings.TrimSpace(string(body)))
+		}
+
+		resp.Body.Close()
 	}
 
-	if resp.StatusCode != http.StatusNotFound {
-		return nil, fmt.Errorf("failed to fetch release by tag '%s': HTTP %d", tag, resp.StatusCode)
-	}
-
-	return nil, fmt.Errorf("release not found for tag '%s' (tried with/without 'v')", tag)
+	return nil, fmt.Errorf("release not found for tag '%s' (tried with and without 'v')", tag)
 }
 
 // downloadBinary downloads a binary for the current platform
