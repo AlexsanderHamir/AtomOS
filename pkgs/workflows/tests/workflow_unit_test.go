@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -8,14 +9,20 @@ import (
 )
 
 func TestCompileWorkflow(t *testing.T) {
-	workflowPath := filepath.Join("..", "..", "..", "examples", "codereview_workflow_atomos.yaml")
+	t.Parallel()
 
-	wm := workflows.NewWorkflowManager()
+	testDir := fmt.Sprintf("./atomos-test-dir-%s", t.Name())
+	wm := workflows.NewWorkflowManager(testDir)
 
-	err := wm.CompileWorkflow(workflowPath)
-	if err != nil {
-		t.Fatalf("CompileWorkflow failed: %v", err)
-	}
+	t.Run("compile", func(t *testing.T) {
+		workflowPath := filepath.Join("validcases", "pipeline_workflow_atoms.yaml")
+		err := wm.CompileWorkflow(workflowPath)
+		if err != nil {
+			t.Fatalf("CompileWorkflow failed: %v", err)
+		}
+	})
 
-	t.Log("Workflow compiled successfully")
+	t.Run("run", func(t *testing.T) {
+
+	})
 }
