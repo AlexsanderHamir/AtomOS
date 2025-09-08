@@ -106,12 +106,18 @@ func (wm *WorkflowManager) RunWorkFlow(wfn Workflowname) error {
 
 // Execute block with access to all connections
 func (wm *WorkflowManager) executeBlock(excArgs ExecuteArgs) error {
-	for i, edge := range excArgs.incon {
-		fmt.Println(i, edge)
-	}
-
 	shouldUseSource := len(excArgs.incon) <= 0
 	binary := excArgs.metadata.BinaryPath
+
+	for _, edge := range excArgs.incon {
+		inputpath := edge.Properties.Attributes["input"]
+		outputpath := edge.Properties.Attributes["output"]
+		fromEntry := edge.Properties.Attributes["fromEntry"]
+
+		if err := wm.fromNode(binary, fromEntry, inputpath, outputpath); err != nil {
+			return fmt.Errorf("fromNode failed: %w", err)
+		}
+	}
 
 	for _, edge := range excArgs.outcon {
 		inputpath := edge.Properties.Attributes["input"]
