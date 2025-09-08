@@ -1,3 +1,12 @@
+// Copyright (c) 2025 Alexsander Hamir Gomes Baptista
+//
+// This file is part of AtomOS and licensed under the Sustainable Use License (SUL).
+// You may use, modify, and redistribute this software for personal or internal business use.
+// Offering it as a commercial hosted service requires a separate license.
+//
+// Full license: see the LICENSE file in the root of this repository
+// or contact alexsanderhamirgomesbaptista@gmail.com.
+
 package main
 
 import (

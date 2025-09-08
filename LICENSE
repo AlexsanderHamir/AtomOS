@@ -1,10 +1,19 @@
+Sustainable Use License (SUL)
 Copyright (c) 2025 Alexsander Hamir Gomes Baptista
 All rights reserved.
 
-This software is made available under the Sustainable Use License (SUL):
+This software is licensed under the Sustainable Use License (SUL).
 
-You may use, modify, and redistribute this software for personal use or internal business purposes, free of charge.
-You may provide consulting, support, or services based on this software, as long as it is for users running it internally.
-You may no offer this software, or derivative works, as a commercial hosted service without a separate commercial agreement from the copyright holder.
+Permissions
 
-For commercial licensing inquiries, contact: alexsanderhamirgomesbaptista@gmail.com
+* You may use, modify, and redistribute this software for personal use or internal business purposes, free of charge.
+* You may provide consulting, integration, support, or services based on this software, provided the software is run only within the customer’s own environment.
+
+Restrictions
+
+* You may not offer this software, or any derivative work, as a commercial hosted service (SaaS/PaaS/IaaS) without a separate commercial agreement from the copyright holder.
+* You may not sell, sublicense, or otherwise commercially redistribute this software or derivative works without explicit written permission.
+* You may not remove or alter copyright, license, or attribution notices.
+
+Commercial Licensing
+For commercial licensing inquiries, please contact: alexsanderhamirgomesbaptista@gmail.com
