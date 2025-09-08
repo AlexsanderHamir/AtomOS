@@ -112,9 +112,6 @@ func (wm *WorkflowManager) RunWorkFlow(wfn Workflowname) error {
 
 // Execute block with access to all connections
 func (wm *WorkflowManager) executeBlock(excArgs ExecuteArgs) error {
-	fmt.Printf("\n  Executing: %s\n", excArgs.block.Name)
-
-	fmt.Printf("    Inputs (%d):\n", len(excArgs.incon))
 	for i, edge := range excArgs.incon {
 		fmt.Println(i, edge)
 	}
@@ -122,7 +119,6 @@ func (wm *WorkflowManager) executeBlock(excArgs ExecuteArgs) error {
 	shouldUseSource := len(excArgs.incon) <= 0
 	binary := excArgs.metadata.BinaryPath
 
-	fmt.Printf("    Outputs (%d):\n", len(excArgs.outcon))
 	// TODO: We're supposed to pass the correct input to the
 	// the expected command, save the output and pass to the expected
 	// node.
