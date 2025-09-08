@@ -16,4 +16,4 @@ Think of it as **n8n, but for AI agents**, turning existing OSS libraries into c
 
 ## License
 
-[Custom License](LICENSE)
+[SUL](LICENSE)
