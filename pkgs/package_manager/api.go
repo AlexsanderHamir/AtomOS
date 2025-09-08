@@ -103,36 +103,36 @@ func (pm *PackageManager) Install(req InstallRequest) (*BlockMetadata, error) {
 }
 
 // GetLoadedBlock returns a specific block by name from the loaded installation
-func (pm *PackageManager) GetLoadedBlock(blockName string) (*BlockMetadata, bool) {
+func (pm *PackageManager) GetLoadedBlock(Blockname string) (*BlockMetadata, bool) {
 	if pm.loadedBlocks == nil {
 		return nil, false
 	}
-	block, exists := pm.loadedBlocks[blockName]
+	block, exists := pm.loadedBlocks[Blockname]
 	return block, exists
 }
 
 // Uninstall removes an installed block
-func (pm *PackageManager) Uninstall(blockName string) error {
-	metadata, err := pm.getMetadata(blockName)
+func (pm *PackageManager) Uninstall(Blockname string) error {
+	metadata, err := pm.getMetadata(Blockname)
 	if err != nil {
-		return fmt.Errorf("block '%s' is not installed: %v", blockName, err)
+		return fmt.Errorf("block '%s' is not installed: %v", Blockname, err)
 	}
 
 	if err := os.Remove(metadata.BinaryPath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove binary: %v", err)
 	}
 
-	metadataPath := filepath.Join(pm.InstallDir, blockName, "metadata", fmt.Sprintf("%s.json", metadata.Version))
+	metadataPath := filepath.Join(pm.InstallDir, Blockname, "metadata", fmt.Sprintf("%s.json", metadata.Version))
 	if err := os.Remove(metadataPath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove metadata: %v", err)
 	}
 
 	// Attempt to remove block directory if empty
-	_ = os.Remove(filepath.Join(pm.InstallDir, blockName))
+	_ = os.Remove(filepath.Join(pm.InstallDir, Blockname))
 
 	// Remove from loaded blocks if the package manager is loaded
 	if pm.loadedBlocks != nil {
-		delete(pm.loadedBlocks, blockName)
+		delete(pm.loadedBlocks, Blockname)
 	}
 
 	return nil

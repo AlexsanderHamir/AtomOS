@@ -2,11 +2,24 @@ package tests
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/AlexsanderHamir/AtomOS/pkgs/workflows"
+	"github.com/joho/godotenv"
 )
+
+func TestMain(m *testing.M) {
+	err := godotenv.Load("../../../.env")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to load .env: %v\n", err)
+		os.Exit(1)
+	}
+
+	code := m.Run()
+	os.Exit(code)
+}
 
 func TestCompileWorkflow(t *testing.T) {
 	t.Parallel()

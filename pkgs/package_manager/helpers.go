@@ -1,6 +1,7 @@
 package packagemanager
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,73 +10,122 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
 
-// fetchBlockInfo fetches the agentic_support.yaml file from the repository
-func (pm *PackageManager) fetchBlockInfo(repo string) (*BlockInfo, error) {
-	rawURL := fmt.Sprintf("https://raw.githubusercontent.com/%s/main/agentic_support.yaml", repo)
+type GitHubAsset struct {
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	DownloadURL string `json:"browser_download_url"`
+}
 
-	// Try main branch first
-	resp, err := http.Get(rawURL)
+type githubContent struct {
+	Content  string `json:"content"`
+	Encoding string `json:"encoding"`
+}
+
+func (pm *PackageManager) fetchBlockInfo(repo string) (*BlockInfo, error) {
+	token := os.Getenv("GITHUB_TOKEN")
+	client := &http.Client{}
+
+	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/contents/agentic_support.yaml", repo)
+	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch agentic_support.yaml from main branch: %w", err)
+		return nil, err
+	}
+
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch agentic_support.yaml: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// If main branch doesn't exist, try master branch
-	if resp.StatusCode == http.StatusNotFound {
-		rawURL = fmt.Sprintf("https://raw.githubusercontent.com/%s/master/agentic_support.yaml", repo)
-		resp, err = http.Get(rawURL)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch agentic_support.yaml from master branch: %w", err)
-		}
-		defer resp.Body.Close()
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch agentic_support.yaml: HTTP %d", resp.StatusCode)
-	}
-
-	content, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
+	if resp.StatusCode != http.StatusOK {
+		switch resp.StatusCode {
+		case http.StatusNotFound:
+			return nil, fmt.Errorf("agentic_support.yaml not found in repository %s", repo)
+		case http.StatusUnauthorized, http.StatusForbidden:
+			return nil, fmt.Errorf("authentication failed - check GITHUB_TOKEN permissions for repository %s", repo)
+		default:
+			return nil, fmt.Errorf("GitHub API error %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		}
+	}
+
+	var gc githubContent
+	if err := json.Unmarshal(body, &gc); err != nil {
+		return nil, fmt.Errorf("failed to parse GitHub API response: %w", err)
+	}
+
+	if gc.Encoding != "base64" {
+		return nil, fmt.Errorf("unexpected encoding: %s", gc.Encoding)
+	}
+
+	data, err := base64.StdEncoding.DecodeString(strings.ReplaceAll(gc.Content, "\n", ""))
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode base64 content: %w", err)
+	}
+
 	var blockInfo BlockInfo
-	if err := yaml.Unmarshal(content, &blockInfo); err != nil {
+	if err := yaml.Unmarshal(data, &blockInfo); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
 
 	return &blockInfo, nil
 }
 
-// convertEntriesToMap converts a slice of Entry to a map[string]Entry using the entry name as the key
-func convertEntriesToMap(entries []Entry) map[string]Entry {
-	result := make(map[string]Entry)
-	for _, entry := range entries {
-		result[entry.Name] = entry
-	}
-	return result
-}
-
-// getLatestRelease fetches the latest release from GitHub
+// getLatestRelease fetches the latest release from GitHub (supports both public and private repos)
 func (pm *PackageManager) getLatestRelease(repo string) (*GitHubRelease, error) {
+	token := os.Getenv("GITHUB_TOKEN")
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
 	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch latest release: %w", err)
 	}
 	defer resp.Body.Close()
 
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch latest release: HTTP %d", resp.StatusCode)
+		switch resp.StatusCode {
+		case http.StatusNotFound:
+			return nil, fmt.Errorf("no releases found for repository %s", repo)
+		case http.StatusUnauthorized, http.StatusForbidden:
+			return nil, fmt.Errorf("authentication failed - check GITHUB_TOKEN permissions for repository %s", repo)
+		default:
+			return nil, fmt.Errorf("GitHub API error %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		}
 	}
 
 	var release GitHubRelease
-	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+	if err := json.Unmarshal(body, &release); err != nil {
 		return nil, fmt.Errorf("failed to decode release JSON: %w", err)
 	}
 
@@ -83,8 +133,11 @@ func (pm *PackageManager) getLatestRelease(repo string) (*GitHubRelease, error) 
 }
 
 // getReleaseByTag fetches a specific GitHub release by tag and is tolerant
-// to tags with or without a leading 'v'.
+// to tags with or without a leading 'v'. Supports both public and private repos.
 func (pm *PackageManager) getReleaseByTag(repo, tag string) (*GitHubRelease, error) {
+	token := os.Getenv("GITHUB_TOKEN")
+	client := &http.Client{Timeout: 30 * time.Second}
+
 	withV := tag
 	if !strings.HasPrefix(tag, "v") {
 		withV = "v" + tag
@@ -93,102 +146,69 @@ func (pm *PackageManager) getReleaseByTag(repo, tag string) (*GitHubRelease, err
 
 	for _, candidate := range []string{withV, withoutV} {
 		url := fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", repo, candidate)
-		resp, err := http.Get(url)
+		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch release by tag '%s': %w", candidate, err)
+			return nil, fmt.Errorf("create request for tag '%s': %w", candidate, err)
 		}
 
-		if resp.StatusCode == http.StatusOK {
-			var release GitHubRelease
-			if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-				resp.Body.Close()
-				return nil, fmt.Errorf("failed to decode release JSON: %w", err)
-			}
-			resp.Body.Close()
-			return &release, nil
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
+		req.Header.Set("Accept", "application/vnd.github+json")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("fetch release by tag '%s': %w", candidate, err)
 		}
 
-		if resp.StatusCode != http.StatusNotFound {
-			body, _ := io.ReadAll(resp.Body)
-			resp.Body.Close()
-			return nil, fmt.Errorf("failed to fetch release by tag '%s': HTTP %d: %s", candidate, resp.StatusCode, strings.TrimSpace(string(body)))
-		}
-
+		body, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
+		if err != nil {
+			return nil, fmt.Errorf("read response for tag '%s': %w", candidate, err)
+		}
+
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var release GitHubRelease
+			if err := json.Unmarshal(body, &release); err != nil {
+				return nil, fmt.Errorf("decode JSON for tag '%s': %w", candidate, err)
+			}
+			return &release, nil
+
+		case http.StatusNotFound:
+			continue
+
+		case http.StatusUnauthorized, http.StatusForbidden:
+			return nil, fmt.Errorf("authentication failed for %s - check GITHUB_TOKEN", repo)
+
+		default:
+			return nil, fmt.Errorf("GitHub API error %d for tag '%s': %s",
+				resp.StatusCode, candidate, strings.TrimSpace(string(body)))
+		}
 	}
 
-	return nil, fmt.Errorf("release not found for tag '%s' (tried with and without 'v')", tag)
+	return nil, fmt.Errorf("release not found for tag '%s' in %s (tried with/without 'v')", tag, repo)
 }
 
 // downloadBinary downloads a binary for the current platform
 func (pm *PackageManager) downloadBinary(repo, version string, blockInfo *BlockInfo) (string, error) {
-	osName := runtime.GOOS
-	arch := runtime.GOARCH
-
-	// Map Go's runtime values to the YAML keys
-	platformKey := fmt.Sprintf("%s-%s", osName, arch)
-
-	// Handle Windows executable extension
-	if osName == "windows" {
-		platformKey = fmt.Sprintf("%s-%s", osName, arch)
+	binaryName, err := pm.getBinaryNameForPlatform(blockInfo)
+	if err != nil {
+		return "", err
 	}
 
-	binaryName, exists := blockInfo.Binary.Assets[platformKey]
-	if !exists {
-		return "", fmt.Errorf("no binary found for platform %s", platformKey)
-	}
-
-	// Create per-block bin directory under the package manager's install directory
 	binDir := filepath.Join(pm.InstallDir, blockInfo.Name, "bin")
 	if err := os.MkdirAll(binDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create bin directory: %w", err)
 	}
 
-	// Construct the local file path
 	localPath := filepath.Join(binDir, binaryName)
 
-	// Resolve the release and pick the correct asset URL rather than constructing it
-	release, err := pm.getReleaseByTag(repo, version)
-	if err != nil {
-		return "", fmt.Errorf("failed to resolve release '%s': %w", version, err)
+	if err := pm.downloadAsset(repo, version, binaryName, localPath); err != nil {
+		return "", fmt.Errorf("downloadAsset failed: %w", err)
 	}
 
-	var assetURL string
-	for _, a := range release.Assets {
-		if a.Name == binaryName {
-			assetURL = a.DownloadURL
-			break
-		}
-	}
-	if assetURL == "" {
-		return "", fmt.Errorf("asset '%s' not found in release %s", binaryName, release.TagName)
-	}
-
-	resp, err := http.Get(assetURL)
-	if err != nil {
-		return "", fmt.Errorf("failed to download binary: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to download binary: HTTP %d", resp.StatusCode)
-	}
-
-	// Create the local file
-	file, err := os.Create(localPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to create local file: %w", err)
-	}
-	defer file.Close()
-
-	// Copy the downloaded content to the file
-	_, err = io.Copy(file, resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to write binary to file: %w", err)
-	}
-
-	// Make the binary executable on Unix-like systems
-	if osName != "windows" {
+	if runtime.GOOS != "windows" {
 		if err := os.Chmod(localPath, 0755); err != nil {
 			return "", fmt.Errorf("failed to make binary executable: %w", err)
 		}
@@ -197,10 +217,92 @@ func (pm *PackageManager) downloadBinary(repo, version string, blockInfo *BlockI
 	return localPath, nil
 }
 
+// getBinaryNameForPlatform returns the binary name for the current platform
+func (pm *PackageManager) getBinaryNameForPlatform(blockInfo *BlockInfo) (string, error) {
+	osName := runtime.GOOS
+	arch := runtime.GOARCH
+	platformKey := fmt.Sprintf("%s-%s", osName, arch)
+
+	binaryName, exists := blockInfo.Binary.Assets[platformKey]
+	if !exists {
+		return "", fmt.Errorf("no binary found for platform %s", platformKey)
+	}
+
+	return binaryName, nil
+}
+
+// downloadAsset downloads a specific asset from a GitHub release
+func (pm *PackageManager) downloadAsset(repo, version, assetName, localPath string) error {
+	token := os.Getenv("GITHUB_TOKEN")
+	if token == "" {
+		return fmt.Errorf("GITHUB_TOKEN is required for downloading assets")
+	}
+
+	// Get release to find asset
+	release, err := pm.getReleaseByTag(repo, version)
+	if err != nil {
+		return fmt.Errorf("failed to resolve release '%s': %w", version, err)
+	}
+
+	// Find the asset (not just the URL).
+	asset, err := pm.findAsset(release, assetName)
+	if err != nil {
+		return fmt.Errorf("findAsset failed: %w", err)
+	}
+
+	// Use the GitHub API endpoint with asset ID.
+	assetURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/assets/%d", repo, asset.ID)
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	req, err := http.NewRequest("GET", assetURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create asset request: %w", err)
+	}
+
+	// Required headers for GitHub asset downloads
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Accept", "application/octet-stream") // Critical for binary downloads
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to download asset: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("download failed: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	// Create the local file
+	file, err := os.Create(localPath)
+	if err != nil {
+		return fmt.Errorf("failed to create local file: %w", err)
+	}
+	defer file.Close()
+
+	// Copy the downloaded content to the file
+	if _, err := io.Copy(file, resp.Body); err != nil {
+		return fmt.Errorf("failed to write to file: %w", err)
+	}
+
+	return nil
+}
+
+// findAsset finds the asset by name and returns the asset object
+func (pm *PackageManager) findAsset(release *GitHubRelease, assetName string) (*ReleaseAsset, error) {
+	for _, asset := range release.Assets {
+		if asset.Name == assetName {
+			return &asset, nil
+		}
+	}
+	return nil, fmt.Errorf("asset '%s' not found in release %s", assetName, release.TagName)
+}
+
 // isBlockInstalled checks if a block is already installed
-func (pm *PackageManager) isBlockInstalled(blockName string) bool {
+func (pm *PackageManager) isBlockInstalled(Blockname string) bool {
 	// Consider installed if there's at least one versioned metadata file under <block>/metadata/
-	blockDir := filepath.Join(pm.InstallDir, blockName, "metadata")
+	blockDir := filepath.Join(pm.InstallDir, Blockname, "metadata")
 	entries, err := os.ReadDir(blockDir)
 	if err != nil {
 		return false
@@ -237,9 +339,9 @@ func (pm *PackageManager) storeMetadata(metadata *BlockMetadata) error {
 }
 
 // getMetadata retrieves block metadata from disk
-func (pm *PackageManager) getMetadata(blockName string) (*BlockMetadata, error) {
+func (pm *PackageManager) getMetadata(Blockname string) (*BlockMetadata, error) {
 	// Choose the most recently modified version metadata file
-	blockDir := filepath.Join(pm.InstallDir, blockName, "metadata")
+	blockDir := filepath.Join(pm.InstallDir, Blockname, "metadata")
 	entries, err := os.ReadDir(blockDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open metadata directory: %w", err)
@@ -262,7 +364,7 @@ func (pm *PackageManager) getMetadata(blockName string) (*BlockMetadata, error) 
 		}
 	}
 	if latestPath == "" {
-		return nil, fmt.Errorf("no metadata found for block %s", blockName)
+		return nil, fmt.Errorf("no metadata found for block %s", Blockname)
 	}
 
 	file, err := os.Open(latestPath)
@@ -386,8 +488,8 @@ func (pm *PackageManager) list() (*listResult, error) {
 	var blocks []BlockMetadata
 	for _, file := range files {
 		if file.IsDir() {
-			blockName := file.Name()
-			metadata, err := pm.getMetadata(blockName)
+			Blockname := file.Name()
+			metadata, err := pm.getMetadata(Blockname)
 			if err != nil {
 				continue
 			}
@@ -399,4 +501,13 @@ func (pm *PackageManager) list() (*listResult, error) {
 		Blocks: blocks,
 		Total:  len(blocks),
 	}, nil
+}
+
+// convertEntriesToMap converts a slice of Entry to a map[string]Entry using the entry name as the key
+func convertEntriesToMap(entries []Entry) map[string]Entry {
+	result := make(map[string]Entry)
+	for _, entry := range entries {
+		result[entry.Name] = entry
+	}
+	return result
 }

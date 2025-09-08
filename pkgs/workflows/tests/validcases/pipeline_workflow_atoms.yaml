@@ -29,9 +29,9 @@ connections:
     to_block: textprocessor
     to_entry: count
 
-    # For nodes with no incoming edges we may need an extra,
-    # field, because [input] doens't really mean anything, unless
-    # it's coming from another node, then its a named saved result.
+    # For nodes with no incoming edges need an extra field, 
+    # because [input] doens't really mean anything,
+    # unless it's coming from another node, then its a named saved result.
     input: file
     source: path/to/file
 

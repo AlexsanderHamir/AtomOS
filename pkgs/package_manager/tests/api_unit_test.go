@@ -8,7 +8,19 @@ import (
 	"testing"
 
 	packagemanager "github.com/AlexsanderHamir/AtomOS/pkgs/package_manager"
+	"github.com/joho/godotenv"
 )
+
+func TestMain(m *testing.M) {
+	err := godotenv.Load("../../../.env")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to load .env: %v\n", err)
+		os.Exit(1)
+	}
+
+	code := m.Run()
+	os.Exit(code)
+}
 
 func TestInstallWithTestDir(t *testing.T) {
 	t.Parallel()

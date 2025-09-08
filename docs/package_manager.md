@@ -22,17 +22,17 @@ A simple package manager for AtomOS blocks that can download, store, delete, and
 
 - `Install(req InstallRequest) (*InstallResult, error)` - Installs a block
 - `Update(req UpdateRequest) (*UpdateResult, error)` - Updates an installed block
-- `Uninstall(blockName string) error` - Removes an installed block
+- `Uninstall(Blockname string) error` - Removes an installed block
 - `list() (*listResult, error)` - lists all installed blocks
-- `GetInfo(blockName string) (*BlockMetadata, error)` - Gets information about a specific block
+- `GetInfo(Blockname string) (*BlockMetadata, error)` - Gets information about a specific block
 
 ### Installation Management Methods
 
 - `isExistingInstallation() bool` - Checks if this is an existing installation
 - `IsLoaded() bool` - Checks if the installation has been loaded into memory
 - `GetLoadedBlocks() []BlockMetadata` - Returns the blocks loaded from existing installation
-- `GetLoadedBlock(blockName string) (BlockMetadata, bool)` - Returns a specific block by name from loaded installation
-- `IsBlockLoaded(blockName string) bool` - Checks if a specific block is loaded in memory
+- `GetLoadedBlock(Blockname string) (BlockMetadata, bool)` - Returns a specific block by name from loaded installation
+- `IsBlockLoaded(Blockname string) bool` - Checks if a specific block is loaded in memory
 - `checkBinariesExistAndLoad() error` - Validates the integrity of an existing installation
 - `GetInstallationStats() (*InstallationStats, error)` - Gets detailed installation statistics
 

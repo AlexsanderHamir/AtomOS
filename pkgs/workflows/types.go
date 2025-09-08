@@ -34,13 +34,16 @@ type Connection struct {
 	Source    string `yaml:"source"`
 }
 
-type blockname string
-type workflowname string
+type Blockname string
+type Workflowname string
+type Outputkey string
+type Outputres string
 
 type WorkflowManager struct {
 	pkgmanager *packagemanager.PackageManager
-	metadata   map[blockname]*packagemanager.BlockMetadata
-	workflows  map[workflowname]graph.Graph[string, *Block]
+	metadata   map[Blockname]*packagemanager.BlockMetadata
+	workflows  map[Workflowname]graph.Graph[string, *Block]
+	results    map[Outputkey]Outputres
 }
 
 type ExecuteArgs struct {

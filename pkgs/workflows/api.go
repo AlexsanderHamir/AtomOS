@@ -12,8 +12,9 @@ import (
 func NewWorkflowManager(path string) *WorkflowManager {
 	return &WorkflowManager{
 		pkgmanager: packagemanager.NewPackageManagerWithTestDir(path),
-		metadata:   map[blockname]*packagemanager.BlockMetadata{},
-		workflows:  map[workflowname]graph.Graph[string, *Block]{},
+		metadata:   map[Blockname]*packagemanager.BlockMetadata{},
+		workflows:  map[Workflowname]graph.Graph[string, *Block]{},
+		results:    map[Outputkey]Outputres{},
 	}
 }
 
@@ -35,17 +36,17 @@ func (wm *WorkflowManager) CompileWorkflow(workflowPath string) error {
 			return fmt.Errorf("failed to install block '%s': %w", block.Name, err)
 		}
 
-		wm.metadata[blockname(block.Name)] = blockMetadata
+		wm.metadata[Blockname(block.Name)] = blockMetadata
 	}
 
 	g := buildGraph(rawWorkflow)
-	wm.workflows[workflowname(rawWorkflow.Name)] = g
+	wm.workflows[Workflowname(rawWorkflow.Name)] = g
 
 	return nil
 }
 
 // BFS traversal with connection access
-func (wm *WorkflowManager) RunWorkFlow(wfn workflowname) error {
+func (wm *WorkflowManager) RunWorkFlow(wfn Workflowname) error {
 	g := wm.workflows[wfn]
 
 	startNode := findRootNode(g)
@@ -88,7 +89,7 @@ func (wm *WorkflowManager) RunWorkFlow(wfn workflowname) error {
 			incomingConnections, incomingFromBlocks := getIncoming(adjacencyMap, currentNode)
 			outgoingConnections, outgoingToBlocks := getOutGoing(adjacencyMap, currentNode)
 
-			blockMetadata := wm.metadata[blockname(block.Name)]
+			blockMetadata := wm.metadata[Blockname(block.Name)]
 			excArgs := ExecuteArgs{block, blockMetadata, incomingConnections, incomingFromBlocks, outgoingConnections, outgoingToBlocks}
 
 			err = wm.executeBlock(excArgs)
@@ -111,35 +112,31 @@ func (wm *WorkflowManager) RunWorkFlow(wfn workflowname) error {
 
 // Execute block with access to all connections
 func (wm *WorkflowManager) executeBlock(excArgs ExecuteArgs) error {
-
 	fmt.Printf("\n  Executing: %s\n", excArgs.block.Name)
 
-	// Show incoming connections
 	fmt.Printf("    Inputs (%d):\n", len(excArgs.incon))
 	for i, edge := range excArgs.incon {
-		fmt.Printf("      %s -> %s (%s->%s)\n",
-			excArgs.inblock[i], excArgs.block.Name,
-			edge.Properties.Attributes["output"],
-			edge.Properties.Attributes["input"])
+		fmt.Println(i, edge)
 	}
 
-	// Show outgoing connections
+	shouldUseSource := len(excArgs.incon) <= 0
+	binary := excArgs.metadata.BinaryPath
+
 	fmt.Printf("    Outputs (%d):\n", len(excArgs.outcon))
-	for i, edge := range excArgs.outcon {
-		fmt.Printf("      %s -> %s (%s->%s)\n",
-			excArgs.block.Name, excArgs.outblock[i],
-			edge.Properties.Attributes["output"],
-			edge.Properties.Attributes["input"])
-	}
+	// TODO: We're supposed to pass the correct input to the
+	// the expected command, save the output and pass to the expected
+	// node.
+	for _, edge := range excArgs.outcon {
+		inputpath := edge.Properties.Attributes["input"]
+		outputpath := edge.Properties.Attributes["output"]
 
-	// Your block execution logic here
-	// You now have access to:
-	// - block: the current block
-	// - metadata: block metadata
-	// - incomingConnections: edges coming in
-	// - incomingFromBlocks: source block names
-	// - outgoingConnections: edges going out
-	// - outgoingToBlocks: target block names
+		if shouldUseSource {
+			wm.fromSource(binary, outputpath, inputpath)
+			continue
+		}
+
+		wm.fromNode(binary, inputpath, outputpath)
+	}
 
 	return nil
 }

@@ -25,7 +25,7 @@ type InstallRequest struct {
 
 // UpdateRequest represents a request to update a block
 type UpdateRequest struct {
-	BlockName string `json:"block_name"`
+	Blockname string `json:"block_name"`
 	Version   string `json:"version"` // If empty, will check for latest
 }
 
@@ -86,6 +86,7 @@ type GitHubRelease struct {
 
 // ReleaseAsset represents an asset in a GitHub release
 type ReleaseAsset struct {
+	ID            int    `json:"id"` // Add this field - it's required!
 	Name          string `json:"name"`
 	ContentType   string `json:"content_type"`
 	Size          int    `json:"size"`
@@ -100,7 +101,7 @@ type InstallResult struct {
 	Success    bool   `json:"success"`
 	Message    string `json:"message"`
 	BinaryPath string `json:"binary_path,omitempty"`
-	BlockName  string `json:"block_name,omitempty"`
+	Blockname  string `json:"block_name,omitempty"`
 	Version    string `json:"version,omitempty"`
 }
 
