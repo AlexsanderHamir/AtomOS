@@ -28,8 +28,6 @@ type Connection struct {
 	FromBlock string `yaml:"from_block"`
 	FromEntry string `yaml:"from_entry"`
 	Output    string `yaml:"output"`
-	ToBlock   string `yaml:"to_block"`
-	ToEntry   string `yaml:"to_entry"`
 	Input     string `yaml:"input"`
 	Source    string `yaml:"source"`
 }

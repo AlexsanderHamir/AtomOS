@@ -8,15 +8,14 @@ import (
 	"strings"
 )
 
-func runBinaryWithPipe(binary, filePath string) (string, error) {
+func runBinaryWithPipe(binary, entry, filePath string) (string, error) {
 	file, err := os.Open(filePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to open file: %w", err)
+
+	cmd := exec.Command(binary, entry)
+	if err == nil {
+		cmd.Stdin = file
 	}
 	defer file.Close()
-
-	cmd := exec.Command(binary)
-	cmd.Stdin = file
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -32,9 +31,9 @@ func runBinaryWithPipe(binary, filePath string) (string, error) {
 
 // runBinaryWithString pipes the given input string into the binary's stdin
 // and returns the binary's stdout output.
-func runBinaryWithString(binary string, input Outputres) (string, error) {
+func runBinaryWithString(binary, entry string, input Outputres) (string, error) {
 	// Prepare the command
-	cmd := exec.Command(binary)
+	cmd := exec.Command(binary, entry)
 
 	// Pipe string into stdin
 	cmd.Stdin = strings.NewReader(string(input))

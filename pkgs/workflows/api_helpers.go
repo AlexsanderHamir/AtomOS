@@ -32,14 +32,29 @@ func buildGraph(rwf *RawWorkflow) graph.Graph[string, *Block] {
 		g.AddVertex(&block)
 	}
 
-	for _, connection := range rwf.Connections {
-		g.AddEdge(connection.FromBlock, connection.ToBlock,
-			graph.EdgeAttribute("fromEntry", connection.FromEntry),
-			graph.EdgeAttribute("output", connection.Output),
-			graph.EdgeAttribute("toEntry", connection.ToEntry),
-			graph.EdgeAttribute("input", connection.Input),
-			graph.EdgeAttribute("source", connection.Source),
-		)
+	// Infer edges by matching outputs to inputs across connections.
+	// For each connection A that produces an output, find every connection B whose
+	// input matches A's output. Create an edge from A.FromBlock -> B.FromBlock and
+	// carry relevant attributes for execution.
+	for _, src := range rwf.Connections {
+		for _, dst := range rwf.Connections {
+			if dst.Input == "" {
+				continue
+			}
+			if src.Output == "" {
+				continue
+			}
+			if src.Output != dst.Input {
+				continue
+			}
+
+			g.AddEdge(src.FromBlock, dst.FromBlock,
+				graph.EdgeAttribute("fromEntry", src.FromEntry),
+				graph.EdgeAttribute("output", src.Output),
+				graph.EdgeAttribute("input", dst.Input),
+				graph.EdgeAttribute("source", src.Source),
+			)
+		}
 	}
 
 	return g
@@ -96,8 +111,8 @@ func getOutGoing(adjacencyMap map[string]map[string]graph.Edge[string], currentN
 
 // TODO: Both fromSource and fromNode are not completed, we're passing raw data
 // without any commands.
-func (wm *WorkflowManager) fromSource(binary, outputpath, inputPath string) error {
-	output, err := runBinaryWithPipe(binary, inputPath)
+func (wm *WorkflowManager) fromSource(binary, entry, outputpath, sourcePath string) error {
+	output, err := runBinaryWithPipe(binary, entry, sourcePath)
 	if err != nil {
 		return fmt.Errorf("running binary failed: %w", err)
 	}
@@ -106,10 +121,10 @@ func (wm *WorkflowManager) fromSource(binary, outputpath, inputPath string) erro
 	return nil
 }
 
-func (wm *WorkflowManager) fromNode(binary, inputPath, outputpath string) error {
+func (wm *WorkflowManager) fromNode(binary, entry, inputPath, outputpath string) error {
 	input := wm.results[Outputkey(inputPath)]
 
-	output, err := runBinaryWithString(binary, input)
+	output, err := runBinaryWithString(binary, entry, input)
 	if err != nil {
 		return fmt.Errorf("running binary with string failed: %w", err)
 	}

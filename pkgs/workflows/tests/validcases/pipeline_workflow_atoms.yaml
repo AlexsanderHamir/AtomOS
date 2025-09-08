@@ -14,11 +14,6 @@ blocks:
     github: "AlexsanderHamir/test_2"
     force: false
 
-  - name: sysmonitor
-    version: v0.0.1
-    github: "AlexsanderHamir/test_3"
-    force: false
-
 # If you want the filemanager to have multiple outgoing
 # edges, all you have to do is to create another connection
 # repeat the [from_block] field and change the rest.
@@ -26,25 +21,8 @@ connections:
   - from_block: filemanager
     from_entry: list
     output: file_list
-    to_block: textprocessor
-    to_entry: count
-
-    # For nodes with no incoming edges need an extra field, 
-    # because [input] doens't really mean anything,
-    # unless it's coming from another node, then its a named saved result.
-    input: file
-    source: path/to/file
 
   - from_block: textprocessor
     from_entry: count
     output: statistics
-    to_block: sysmonitor
-    to_entry: system
-    input: input_data
-
-  - from_block: sysmonitor
-    from_entry: system
-    output: system_info
-    to_block:
-    to_entry:
-    input: system_info
+    input: file_list

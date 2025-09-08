@@ -54,9 +54,6 @@ func (wm *WorkflowManager) RunWorkFlow(wfn Workflowname) error {
 		return errors.New("no root node found")
 	}
 
-	fmt.Println("=== BFS TRAVERSAL ===")
-	fmt.Printf("Starting from: %s\n", startNode)
-
 	visited := make(map[string]bool)
 	queue := []string{startNode}
 	level := 0
@@ -68,7 +65,6 @@ func (wm *WorkflowManager) RunWorkFlow(wfn Workflowname) error {
 
 	for len(queue) > 0 {
 		levelSize := len(queue)
-		fmt.Printf("Level %d: ", level)
 
 		for range levelSize {
 			currentNode := queue[0]
@@ -83,8 +79,6 @@ func (wm *WorkflowManager) RunWorkFlow(wfn Workflowname) error {
 			if err != nil {
 				return fmt.Errorf("error getting block %s: %v", currentNode, err)
 			}
-
-			fmt.Printf("%s ", block.Name)
 
 			incomingConnections, incomingFromBlocks := getIncoming(adjacencyMap, currentNode)
 			outgoingConnections, outgoingToBlocks := getOutGoing(adjacencyMap, currentNode)
@@ -119,19 +113,21 @@ func (wm *WorkflowManager) executeBlock(excArgs ExecuteArgs) error {
 	shouldUseSource := len(excArgs.incon) <= 0
 	binary := excArgs.metadata.BinaryPath
 
-	// TODO: We're supposed to pass the correct input to the
-	// the expected command, save the output and pass to the expected
-	// node.
 	for _, edge := range excArgs.outcon {
 		inputpath := edge.Properties.Attributes["input"]
 		outputpath := edge.Properties.Attributes["output"]
+		fromEntry := edge.Properties.Attributes["fromEntry"]
+		sourcePath := edge.Properties.Attributes["source"]
 
 		if shouldUseSource {
-			wm.fromSource(binary, outputpath, inputpath)
-			continue
+			if err := wm.fromSource(binary, fromEntry, outputpath, sourcePath); err != nil {
+				return fmt.Errorf("fromSource failed: %w", err)
+			}
 		}
 
-		wm.fromNode(binary, inputpath, outputpath)
+		if err := wm.fromNode(binary, fromEntry, inputpath, outputpath); err != nil {
+			return fmt.Errorf("fromNode failed: %w", err)
+		}
 	}
 
 	return nil

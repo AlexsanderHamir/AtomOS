@@ -27,6 +27,12 @@ func TestCompileWorkflow(t *testing.T) {
 	testDir := fmt.Sprintf("./atomos-test-dir-%s", t.Name())
 	wm := workflows.NewWorkflowManager(testDir)
 
+	defer func() {
+		if err := os.RemoveAll(testDir); err != nil {
+			t.Logf("failed to remove test dir: %v", err)
+		}
+	}()
+
 	t.Run("compile", func(t *testing.T) {
 		workflowPath := filepath.Join("validcases", "pipeline_workflow_atoms.yaml")
 		err := wm.CompileWorkflow(workflowPath)
@@ -36,6 +42,9 @@ func TestCompileWorkflow(t *testing.T) {
 	})
 
 	t.Run("run", func(t *testing.T) {
-
+		err := wm.RunWorkFlow("simple three-block workflow")
+		if err != nil {
+			t.Fatalf("RunWorkFlow failed: %v", err)
+		}
 	})
 }
