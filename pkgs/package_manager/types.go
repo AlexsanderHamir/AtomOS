@@ -65,7 +65,6 @@ type BlockInfo struct {
 // Entry represents a CLI entry from the block
 type Entry struct {
 	Name        string   `yaml:"name"`
-	Command     string   `yaml:"command"`
 	Description string   `yaml:"description"`
 	Inputs      []Input  `yaml:"inputs"`
 	Outputs     []Output `yaml:"outputs"`

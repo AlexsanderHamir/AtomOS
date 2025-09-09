@@ -1,40 +1,58 @@
 # AtomOS Package Manager
 
-A simple package manager for AtomOS blocks that can download, store, delete, and update binary blocks from GitHub repositories.
+A simple package manager for AtomOS blocks that can download, store, and delete binary blocks from GitHub repositories. It supports automatic installation detection, LSP entry parsing, and cross-platform binary management.
 
 ## Features
 
 - **Download and Install**: Download blocks from GitHub repositories
 - **Simple Downloads**: Download binaries directly from GitHub releases
-- **Update Management**: Update installed blocks to newer versions
 - **Clean Uninstall**: Remove blocks and clean up all associated files
 - **Metadata Tracking**: Track installation metadata including versions and timestamps
 - **Cross-Platform Support**: Support for Linux, macOS, and Windows binaries
 - **Existing Installation Support**: Automatically detect and load existing installations
 - **Installation Validation**: Validate existing installations for integrity
-- **Installation Statistics**: Get detailed statistics about installed blocks
+- **LSP Entry Support**: Parse and store LSP entries from agentic_support.yaml
+- **GitHub Token Support**: Support for private repositories using GITHUB_TOKEN
+- **Version Management**: Support for versioned metadata storage
+- **Testing Support**: Custom test directory support for unit testing
+
+## Missing Features
+
+The following features are mentioned in the original documentation but are not yet implemented:
+
+- **Update Management**: Update installed blocks to newer versions (`Update` method)
+- **Installation Statistics**: Get detailed statistics about installed blocks (`GetInstallationStats` method)
+- **List Public Method**: Public method to list all installed blocks
+- **Get Info Method**: Get information about a specific block by name
+- **IsLoaded Method**: Check if the installation has been loaded into memory
+- **GetLoadedBlocks Method**: Return all blocks loaded from existing installation
+- **IsBlockLoaded Method**: Check if a specific block is loaded in memory
 
 ## API Methods
 
 ### Core Methods
 
-– `NewPackageManager() *PackageManager` - Creates a new package manager instance using default directories and loads existing installation if present
+- `NewPackageManager() *PackageManager` - Creates a new package manager instance using default directories and loads existing installation if present
+- `NewPackageManagerWithTestDir(testDir string) *PackageManager` - Creates a new package manager instance with a custom test directory for testing purposes
 
-- `Install(req InstallRequest) (*InstallResult, error)` - Installs a block
-- `Update(req UpdateRequest) (*UpdateResult, error)` - Updates an installed block
+- `Install(req InstallRequest) (*BlockMetadata, error)` - Installs a block and returns its metadata
 - `Uninstall(Blockname string) error` - Removes an installed block
-- `list() (*listResult, error)` - lists all installed blocks
-- `GetInfo(Blockname string) (*BlockMetadata, error)` - Gets information about a specific block
+- `list() (*listResult, error)` - Lists all installed blocks (internal method)
 
 ### Installation Management Methods
 
 - `isExistingInstallation() bool` - Checks if this is an existing installation
-- `IsLoaded() bool` - Checks if the installation has been loaded into memory
-- `GetLoadedBlocks() []BlockMetadata` - Returns the blocks loaded from existing installation
-- `GetLoadedBlock(Blockname string) (BlockMetadata, bool)` - Returns a specific block by name from loaded installation
-- `IsBlockLoaded(Blockname string) bool` - Checks if a specific block is loaded in memory
+- `GetLoadedBlock(Blockname string) (*BlockMetadata, bool)` - Returns a specific block by name from loaded installation
 - `checkBinariesExistAndLoad() error` - Validates the integrity of an existing installation
-- `GetInstallationStats() (*InstallationStats, error)` - Gets detailed installation statistics
+
+### Helper Methods
+
+- `fetchBlockInfo(repo string) (*BlockInfo, error)` - Fetches block information from GitHub repository
+- `getLatestRelease(repo string) (*GitHubRelease, error)` - Gets the latest release from a GitHub repository
+- `downloadBinary(repo, version string, blockInfo *BlockInfo) (string, error)` - Downloads a binary for the current platform
+- `getBinaryNameForPlatform(blockInfo *BlockInfo) (string, error)` - Returns the binary name for the current platform
+- `storeMetadata(metadata *BlockMetadata) error` - Stores block metadata to disk
+- `getMetadata(Blockname string) (*BlockMetadata, error)` - Retrieves block metadata from disk
 
 ## Installation Management
 
@@ -47,11 +65,74 @@ The package manager automatically detects and loads existing installations. When
 
 ### Loading Behavior
 
-- The package manager checks for existing metadata files in the `~/.atomos/metadata/` directory
-- If metadata files exist, it validates that all corresponding binaries are present
-- Valid installations are loaded into memory and marked as "loaded"
-- Blocks are cached in a map structure for O(1) lookups by block name
+- The package manager checks for existing block directories in the `~/.atomos/` directory
+- For each block directory, it looks for metadata files in the `metadata/` subdirectory
+- If metadata files exist, it validates that all corresponding binaries are present in the `bin/` subdirectory
+- Valid installations are loaded into memory and cached in a map structure for O(1) lookups by block name
 - Invalid installations show warnings but allow the package manager to continue working
+- The package manager uses the most recently modified metadata file for each block
+
+### Installation Detection
+
+The package manager determines if an installation exists by:
+
+1. Checking if the `.atomos` directory exists
+2. Scanning for block directories containing metadata files
+3. Validating that binaries exist for all metadata files
+4. Loading valid blocks into the `loadedBlocks` map
+
+### Error Handling
+
+- Missing binaries for existing metadata files cause installation validation to fail
+- The package manager will show a warning but continue to work for new installations
+- Invalid metadata files are skipped during loading
+
+## Usage Example
+
+```go
+package main
+
+import (
+    "fmt"
+    "log"
+
+    packagemanager "github.com/AlexsanderHamir/AtomOS/pkgs/package_manager"
+)
+
+func main() {
+    // Create a new package manager instance
+    pm := packagemanager.NewPackageManager()
+
+    // Install a block
+    installReq := packagemanager.InstallRequest{
+        Repo:    "AlexsanderHamir/prof",
+        Version: "1.8.1",
+        Force:   false,
+    }
+
+    metadata, err := pm.Install(installReq)
+    if err != nil {
+        log.Fatalf("Installation failed: %v", err)
+    }
+
+    fmt.Printf("Installed block: %s v%s\n", metadata.Name, metadata.Version)
+    fmt.Printf("Binary path: %s\n", metadata.BinaryPath)
+
+    // Get the installed block
+    block, exists := pm.GetLoadedBlock(metadata.Name)
+    if exists {
+        fmt.Printf("Block is loaded: %s\n", block.Name)
+    }
+
+    // Uninstall the block
+    err = pm.Uninstall(metadata.Name)
+    if err != nil {
+        log.Fatalf("Uninstall failed: %v", err)
+    }
+
+    fmt.Println("Block uninstalled successfully")
+}
+```
 
 ## Installation
 
@@ -64,27 +145,47 @@ Blocks must have an `agentic_support.yaml` file at the root of their repository 
 ```yaml
 name: my-block
 description: A description of my block
-version: 1.0.0
+version: v1.0.0
 source:
   type: github
   repo: owner/repo
 binary:
-  from: releases
+  from: release
   assets:
     linux-amd64: my-block-linux-amd64
     darwin-amd64: my-block-darwin-amd64
+    darwin-arm64: my-block-darwin-arm64
     windows-amd64: my-block-windows-amd64.exe
-entries:
-  - name: run
-    command: ./my-block
-    description: Run the block
-    inputs:
-      - name: input_file
-        type: string
-    outputs:
-      - name: output_file
-        type: string
+lsp:
+  entries:
+    run:
+      name: run
+      description: Run the block
+      inputs:
+        - name: input_file
+          type: string
+      outputs:
+        - name: output_file
+          type: string
 ```
+
+### Schema Details
+
+- **name**: The block name (required)
+- **description**: A description of the block (required)
+- **version**: The version tag, typically prefixed with 'v' (e.g., "v1.0.0") (required)
+- **source**: Source configuration (required)
+  - **type**: Must be "github" (required)
+  - **repo**: GitHub repository in "owner/repo" format (required)
+- **binary**: Binary configuration (required)
+  - **from**: Must be "release" (required)
+  - **assets**: Platform-specific binary names (required)
+    - Supported platforms: `linux-amd64`, `darwin-amd64`, `darwin-arm64`, `windows-amd64`
+- **lsp**: LSP (Language Server Protocol) entries configuration (required)
+  - **entries**: Map of entry names to entry definitions (required)
+    - Each entry must have: `name`, `description`, `inputs`, `outputs`
+    - **inputs**: Array of input parameters with `name` and `type`
+    - **outputs**: Array of output parameters with `name` and `type`
 
 ## Directory Structure
 
@@ -92,120 +193,93 @@ The package manager creates the following directory structure:
 
 ```
 ~/.atomos/
-│   └── block-name/
-│       └── binary-file
-~/.atomos/
-├── metadata/
-│   └── block-name.json
-└── cache/
-    └── (temporary files)
+└── block-name/
+    ├── bin/
+    │   └── binary-file
+    └── metadata/
+        └── version.json
 ```
 
-## API Usage
+Each block is organized in its own subdirectory containing:
+
+- `bin/`: Contains the executable binary files for the block
+- `metadata/`: Contains versioned metadata files (e.g., `1.8.1.json`) with block information
+
+### Installation Directory
+
+The default installation directory is `~/.atomos/` (where `~` is the user's home directory). The package manager uses the following fallback logic to determine the home directory:
+
+1. `os.UserHomeDir()` - Standard Go method
+2. `$HOME` environment variable
+3. Current working directory (as fallback)
+4. System temporary directory (as last resort)
+
+For testing purposes, you can use `NewPackageManagerWithTestDir(testDir string)` to create a package manager instance that uses a custom directory instead of the home directory.
+
+## GitHub Integration
+
+The package manager integrates with GitHub for downloading blocks and binaries:
+
+### Authentication
+
+- **Public Repositories**: No authentication required
+- **Private Repositories**: Requires `GITHUB_TOKEN` environment variable
+- The token must have appropriate permissions to access the repository and download releases
+
+### Supported Operations
+
+- **Fetch Block Info**: Downloads `agentic_support.yaml` from repository root
+- **Get Latest Release**: Fetches the latest release information
+- **Download Binaries**: Downloads platform-specific binaries from release assets
+- **Version Support**: Supports both tagged releases (with/without 'v' prefix)
+
+### Error Handling
+
+- **404 Not Found**: Repository or file doesn't exist
+- **401/403 Unauthorized**: Authentication failed or insufficient permissions
+- **Rate Limiting**: GitHub API rate limits are respected
+- **Network Errors**: Timeout and connection errors are handled gracefully
+
+## Data Types
+
+### BlockMetadata
+
+Represents metadata about an installed block:
 
 ```go
-package main
-
-import (
-    "fmt"
-    "log"
-
-    "github.com/AlexsanderHamir/AtomOS/pkgs/package_manager"
-)
-
-func main() {
-    // Create package manager instance
-    // Uses default directories: ~/.atomos and ~/.atomos/cache
-    // If ~/.atomos already exists, it will be loaded and validated
-    pm := package_manager.NewPackageManager()
-
-        // Check if this is an existing installation
-    if pm.isExistingInstallation() {
-        fmt.Println("Loading existing AtomOS installation...")
-
-        // Check if the installation was successfully loaded
-        if pm.IsLoaded() {
-            fmt.Println("Installation loaded successfully!")
-
-                        // Get the loaded blocks
-            loadedBlocks := pm.GetLoadedBlocks()
-            fmt.Printf("Found %d loaded blocks\n", len(loadedBlocks))
-
-            for _, block := range loadedBlocks {
-                fmt.Printf("- %s (v%s)\n", block.Name, block.Version)
-            }
-
-            // Use fast map-based lookups
-            if pm.IsBlockLoaded("my-block") {
-                block, _ := pm.GetLoadedBlock("my-block")
-                fmt.Printf("Found block: %s version %s\n", block.Name, block.Version)
-            }
-        } else {
-            fmt.Println("Installation exists but failed to load")
-        }
-
-        // Validate the existing installation
-        if err := pm.checkBinariesExistAndLoad(); err != nil {
-            fmt.Printf("Warning: Installation validation failed: %v\n", err)
-        }
-
-        // Get installation statistics
-        stats, err := pm.GetInstallationStats()
-        if err != nil {
-            log.Fatalf("Failed to get installation stats: %v", err)
-        }
-
-        fmt.Printf("Found %d installed blocks (total size: %d bytes)\n",
-            stats.TotalBlocks, stats.TotalBinarySize)
-    } else {
-        fmt.Println("Creating new AtomOS installation...")
-    }
-
-    // Install a block
-    req := package_manager.InstallRequest{
-        Repo:    "owner/repo",
-        Version: "v1.0.0",
-        Force:   false,
-    }
-
-    result, err := pm.Install(req)
-    if err != nil {
-        log.Fatalf("Install failed: %v", err)
-    }
-
-    fmt.Printf("Install result: %+v\n", result)
-
-    // list installed blocks
-    listResult, err := pm.list()
-    if err != nil {
-        log.Fatalf("list failed: %v", err)
-    }
-
-    fmt.Printf("Installed blocks: %d\n", listResult.Total)
-    for _, block := range listResult.Blocks {
-        fmt.Printf("- %s (v%s)\n", block.Name, block.Version)
-    }
+type BlockMetadata struct {
+    Name        string           `json:"name"`
+    Version     string           `json:"version"`
+    SourceRepo  string           `json:"source_repo"`
+    BinaryPath  string           `json:"binary_path"`
+    InstalledAt time.Time        `json:"installed_at"`
+    LastUpdated time.Time        `json:"last_updated"`
+    IsActive    bool             `json:"is_active"`
+    LSPEntries  map[string]Entry `json:"lsp_entries,omitempty"`
 }
 ```
 
-## Security
+### InstallRequest
 
-- Binaries are stored in isolated directories per block
-- Metadata is stored separately from binaries for easy cleanup
+Represents a request to install a block:
 
-## Error Handling
+```go
+type InstallRequest struct {
+    Repo    string `json:"repo"`
+    Version string `json:"version"`
+    Force   bool   `json:"force"` // Force reinstall even if already installed
+}
+```
 
-The package manager provides detailed error messages for common issues:
+### Entry
 
-- Repository not found
-- Binary not available for current platform
-- Network connectivity issues
-- Permission errors
+Represents an LSP entry from the block:
 
-## Testing
-
-Run the tests:
-
-```bash
-go test ./pkgs/package_manager/...
+```go
+type Entry struct {
+    Name        string   `yaml:"name"`
+    Description string   `yaml:"description"`
+    Inputs      []Input  `yaml:"inputs"`
+    Outputs     []Output `yaml:"outputs"`
+}
 ```

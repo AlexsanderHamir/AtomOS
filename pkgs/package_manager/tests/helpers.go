@@ -26,7 +26,6 @@ const expectedLSPEntriesNum = 3
 var expectedLSPEntries = map[string]packagemanager.Entry{
 	"run": {
 		Name:        "run",
-		Command:     "prof run",
 		Description: "Run profiling on the target binary",
 		Inputs: []packagemanager.Input{
 			{Name: "target", Type: "path"},
@@ -37,7 +36,6 @@ var expectedLSPEntries = map[string]packagemanager.Entry{
 	},
 	"report": {
 		Name:        "report",
-		Command:     "prof report",
 		Description: "Generate a profiling report from a saved profile",
 		Inputs: []packagemanager.Input{
 			{Name: "profile", Type: "file"},
@@ -48,7 +46,6 @@ var expectedLSPEntries = map[string]packagemanager.Entry{
 	},
 	"flamegraph": {
 		Name:        "flamegraph",
-		Command:     "prof flamegraph",
 		Description: "Generate a flamegraph from a profile file",
 		Inputs: []packagemanager.Input{
 			{Name: "profile", Type: "file"},
@@ -179,9 +176,6 @@ func verifyLSPEntryDetails(t *testing.T, entryName string, entry, expectedEntry 
 	if entry.Name != expectedEntry.Name {
 		t.Fatalf("LSP entry '%s' name mismatch: expected='%s', got='%s'", entryName, expectedEntry.Name, entry.Name)
 	}
-	if entry.Command != expectedEntry.Command {
-		t.Fatalf("LSP entry '%s' command mismatch: expected='%s', got='%s'", entryName, expectedEntry.Command, entry.Command)
-	}
 	if entry.Description != expectedEntry.Description {
 		t.Fatalf("LSP entry '%s' description mismatch: expected='%s', got='%s'", entryName, expectedEntry.Description, entry.Description)
 	}
@@ -285,10 +279,6 @@ func CompareBlockMetadata(t *testing.T, original, retrieved *packagemanager.Bloc
 
 		if originalEntry.Name != retrievedEntry.Name {
 			t.Errorf("LSP entry %s name mismatch: expected %s, got %s", name, originalEntry.Name, retrievedEntry.Name)
-		}
-
-		if originalEntry.Command != retrievedEntry.Command {
-			t.Errorf("LSP entry %s command mismatch: expected %s, got %s", name, originalEntry.Command, retrievedEntry.Command)
 		}
 
 		if originalEntry.Description != retrievedEntry.Description {

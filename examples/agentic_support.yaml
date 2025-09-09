@@ -30,7 +30,6 @@ lsp:
   entries:
     run:
       name: run
-      command: prof run
       description: Run profiling on the target binary
       inputs:
         - name: target
@@ -41,7 +40,6 @@ lsp:
 
     report:
       name: report
-      command: prof report
       description: Generate a profiling report from a saved profile
       inputs:
         - name: profile
@@ -52,7 +50,6 @@ lsp:
 
     flamegraph:
       name: flamegraph
-      command: prof flamegraph
       description: Generate a flamegraph from a profile file
       inputs:
         - name: profile
