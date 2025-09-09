@@ -1,0 +1,31 @@
+{
+    "configurations": [
+        {
+            "name": "Debug TestInstallWithTestDir",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
+            "program": "${workspaceFolder}/pkgs/package_manager/tests",
+            "args": [
+                "-test.run",
+                "^TestInstallWithTestDir$"
+            ],
+            "showLog": true,
+            "dlvFlags": [
+                "--init=${workspaceFolder}/dlv-init.txt"
+            ]
+        },
+        {
+            "name": "Debug TestWorkflow",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
+            "program": "${workspaceFolder}/pkgs/workflows/tests",
+            "args": [
+                "-test.run",
+                "^TestWorkflow$"
+            ],
+            "showLog": true
+        }
+    ]
+}

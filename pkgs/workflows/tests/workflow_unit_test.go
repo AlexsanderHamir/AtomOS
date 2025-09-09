@@ -30,7 +30,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func TestCompileWorkflow(t *testing.T) {
+func TestWorkflow(t *testing.T) {
 	t.Parallel()
 
 	testDir := fmt.Sprintf("./atomos-test-dir-%s", t.Name())
