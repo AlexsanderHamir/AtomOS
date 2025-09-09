@@ -1,0 +1,45 @@
+# Copyright (c) 2025 Alexsander Hamir Gomes Baptista
+#
+# This file is part of AtomOS and licensed under the Sustainable Use License (SUL).
+# You may use, modify, and redistribute this software for personal or internal business use.
+# Offering it as a commercial hosted service requires a separate license.
+#
+# Full license: see the LICENSE file in the root of this repository
+# or contact alexsanderhamirgomesbaptista@gmail.com.
+
+workflow_name: go profiler analysis workflow
+version: 1.0.0
+description: >
+  A workflow that demonstrates profiling a Go application, generating reports,
+  and creating flamegraphs for performance analysis.
+
+blocks:
+  - name: go-profiler
+    version: v1.8.1
+    github: "AlexsanderHamir/prof"
+    force: false
+
+  - name: textprocessor
+    version: v0.0.2
+    github: "AlexsanderHamir/test_2"
+    force: false
+
+connections:
+  - from_block: go-profiler
+    from_entry: run
+    output: profile_data
+
+  - from_block: go-profiler
+    from_entry: report
+    output: profiling_summary
+    input: profile_data
+
+  - from_block: go-profiler
+    from_entry: flamegraph
+    output: performance_flamegraph
+    input: profile_data
+
+  - from_block: textprocessor
+    from_entry: format
+    output: formatted_summary
+    input: profiling_summary
