@@ -12,6 +12,7 @@ package packagemanager
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -172,7 +173,7 @@ func (pm *PackageManager) downloadBinary(repo, version string, blockInfo *BlockI
 func (pm *PackageManager) downloadAsset(repo, version, assetName, localPath string) error {
 	token := os.Getenv("GITHUB_TOKEN")
 	if token == "" {
-		return fmt.Errorf("GITHUB_TOKEN is required for downloading assets")
+		return errors.New("GITHUB_TOKEN is required for downloading assets")
 	}
 
 	// Get release to find asset
