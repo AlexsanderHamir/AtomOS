@@ -56,7 +56,10 @@ func (wm *WorkflowManager) CompileWorkflow(workflowPath string) error {
 
 // BFS traversal with connection access
 func (wm *WorkflowManager) RunWorkFlow(wfn Workflowname) error {
-	g := wm.workflows[wfn]
+	g, ok := wm.workflows[wfn]
+	if !ok {
+		return errors.New("workflow doesn't exist")
+	}
 
 	startNode := findRootNode(g)
 	if startNode == "" {

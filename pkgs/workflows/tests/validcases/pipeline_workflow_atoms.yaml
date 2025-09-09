@@ -13,25 +13,30 @@ description: >
   Simple workflow chaining file operations, text processing, and system info.
 
 blocks:
-  - name: filemanager
-    version: v0.0.1
-    github: "AlexsanderHamir/test_1"
+  - name: textprocessor
+    version: v0.0.2
+    github: "AlexsanderHamir/test_2"
     force: false
 
-  - name: textprocessor
-    version: v0.0.1
-    github: "AlexsanderHamir/test_2"
+  - name: sysmonitor
+    version: v0.0.2
+    github: "AlexsanderHamir/test_3"
     force: false
 
 # If you want the filemanager to have multiple outgoing
 # edges, all you have to do is to create another connection
 # repeat the [from_block] field and change the rest.
 connections:
-  - from_block: filemanager
-    from_entry: list
-    output: file_list
+  - from_block: sysmonitor
+    from_entry: collect
+    output: system_metrics
 
   - from_block: textprocessor
-    from_entry: count
-    output: statistics
-    input: file_list
+    from_entry: format
+    output: formatted_metrics
+    input: system_metrics
+
+  - from_block: sysmonitor
+    from_entry: alert
+    output: system_alerts
+    input: formatted_metrics
