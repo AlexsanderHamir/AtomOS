@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AtomOS - The Bridge Between AI Agents and Open Source</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="navbar">
+      <div class="nav-container">
+        <div class="nav-logo">
+          <span class="logo-text">AtomOS</span>
+        </div>
+        <div class="nav-menu">
+          <a href="#features" class="nav-link">Features</a>
+          <a href="#how-it-works" class="nav-link">How it Works</a>
+          <a href="#examples" class="nav-link">Examples</a>
+          <button class="cta-button">Get Started</button>
+        </div>
+        <div class="hamburger">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-container">
+        <div class="hero-content">
+          <div class="hero-badge">
+            <i class="fas fa-robot"></i>
+            <span>AI-Native Platform</span>
+          </div>
+          <h1 class="hero-title">
+            The bridge between <span class="highlight">AI agents</span> and
+            <span class="highlight">open source libraries</span>
+          </h1>
+          <p class="hero-description">
+            Turn any software into AI-ready building blocks. Eliminate
+            hallucinations with pre-built, tested workflows.
+          </p>
+          <div class="hero-actions">
+            <button class="primary-button">
+              <i class="fas fa-rocket"></i>
+              Start Building
+            </button>
+            <button class="secondary-button">
+              <i class="fas fa-play"></i>
+              Watch Demo
+            </button>
+          </div>
+          <div class="hero-stats">
+            <div class="stat">
+              <span class="stat-number">1000+</span>
+              <span class="stat-label">Libraries Supported</span>
+            </div>
+            <div class="stat">
+              <span class="stat-number">99.9%</span>
+              <span class="stat-label">Reliability</span>
+            </div>
+            <div class="stat">
+              <span class="stat-number">10x</span>
+              <span class="stat-label">Faster Development</span>
+            </div>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <div class="hero-dag-workflow">
+            <div class="hero-dag-row">
+              <div class="hero-dag-node hero-dag-start">
+                <i class="fas fa-database"></i>
+                <span>Library A</span>
+              </div>
+              <div class="hero-dag-node hero-dag-start">
+                <i class="fas fa-code"></i>
+                <span>Library B</span>
+              </div>
+              <div class="hero-dag-node hero-dag-start">
+                <i class="fas fa-tools"></i>
+                <span>Library C</span>
+              </div>
+            </div>
+            <div class="hero-dag-connections">
+              <div class="hero-dag-arrow hero-dag-arrow-down"></div>
+              <div class="hero-dag-arrow hero-dag-arrow-down"></div>
+              <div class="hero-dag-arrow hero-dag-arrow-down"></div>
+            </div>
+            <div class="hero-dag-row">
+              <div class="hero-dag-node hero-dag-process">
+                <i class="fas fa-puzzle-piece"></i>
+                <span>Compose</span>
+              </div>
+            </div>
+            <div class="hero-dag-connections">
+              <div class="hero-dag-arrow hero-dag-arrow-down"></div>
+              <div class="hero-dag-arrow hero-dag-arrow-down-left"></div>
+            </div>
+            <div class="hero-dag-row">
+              <div class="hero-dag-node hero-dag-end">
+                <i class="fas fa-robot"></i>
+                <span>AI Agent</span>
+              </div>
+              <div class="hero-dag-node hero-dag-end">
+                <i class="fas fa-chart-line"></i>
+                <span>Results</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+      <div class="container">
+        <div class="section-header">
+          <h2>Why AtomOS?</h2>
+          <p>
+            Agents perform best when they execute deterministic workflows,
+            applying their reasoning to make pre-defined choices rather than
+            starting from scratch. Agentic systems should leverage more tools
+            than any individual developer.
+          </p>
+        </div>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-puzzle-piece"></i>
+            </div>
+            <h3>AI-Native Blocks</h3>
+            <p>
+              Standardized building units with inputs, outputs, side-effects,
+              and examples. Every block is designed for AI consumption.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-project-diagram"></i>
+            </div>
+            <h3>Pre-defined Workflows</h3>
+            <p>
+              Deterministic sequences of blocks compiled at development time. No
+              more runtime improvisation or hallucinations.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-play-circle"></i>
+            </div>
+            <h3>Execution Runtime</h3>
+            <p>
+              Agents simply execute workflows without reasoning. Focus on
+              strategy, not implementation details.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-shield-alt"></i>
+            </div>
+            <h3>Testable & Reliable</h3>
+            <p>
+              Every workflow is deterministic and testable. Build confidence in
+              your AI systems with predictable outcomes.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-layer-group"></i>
+            </div>
+            <h3>Composable</h3>
+            <p>
+              Mix and match blocks from different libraries. Create complex
+              workflows from simple, reusable components.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-registered"></i>
+            </div>
+            <h3>Registry</h3>
+            <p>
+              Centralized registry of blocks and workflows that any AI system
+              can import and execute.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How it Works Section -->
+    <section id="how-it-works" class="how-it-works">
+      <div class="container">
+        <div class="section-header">
+          <h2>How It Works</h2>
+          <p>
+            Transform any library into an AI-friendly block in three simple
+            steps
+          </p>
+        </div>
+        <div class="steps-container">
+          <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <h3>Add agentic_support.yaml</h3>
+              <p>
+                Define your block's inputs, outputs, and CLI entries in a
+                standardized format
+              </p>
+              <div class="code-snippet">
+                <pre><code>name: "data-processor"
+inputs:
+  - name: "data"
+    type: "string"
+outputs:
+  - name: "result"
+    type: "object"</code></pre>
+              </div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <h3>Implement CLI Interface</h3>
+              <p>
+                Expose your library's functionality through a standardized
+                command-line interface
+              </p>
+              <div class="code-snippet">
+                <pre><code>./my-library process --input data.json --output result.json</code></pre>
+              </div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <h3>Release Binary</h3>
+              <p>
+                Compile and attach your binary to a GitHub release. AtomOS
+                handles the rest!
+              </p>
+              <div class="code-snippet">
+                <pre><code>gh release create v1.0.0 my-library-linux-amd64</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Examples Section -->
+    <section id="examples" class="examples">
+      <div class="container">
+        <div class="section-header">
+          <h2>Real-World Examples</h2>
+          <p>
+            See how AtomOS transforms complex workflows into simple, executable
+            blocks
+          </p>
+        </div>
+        <div class="examples-grid">
+          <div class="example-card">
+            <div class="example-header">
+              <i class="fas fa-chart-bar"></i>
+              <h3>Data Pipeline</h3>
+            </div>
+            <p>
+              Complex ETL pipeline with parallel processing, validation, and
+              multiple outputs.
+            </p>
+            <div class="dag-workflow">
+              <div class="dag-node dag-start">
+                <i class="fas fa-database"></i>
+                <span>Data Sources</span>
+              </div>
+              <div class="dag-connections">
+                <div class="dag-arrow dag-arrow-down"></div>
+                <div class="dag-arrow dag-arrow-down-right"></div>
+                <div class="dag-arrow dag-arrow-down-left"></div>
+              </div>
+              <div class="dag-row">
+                <div class="dag-node dag-process">
+                  <i class="fas fa-filter"></i>
+                  <span>Clean</span>
+                </div>
+                <div class="dag-node dag-process">
+                  <i class="fas fa-cogs"></i>
+                  <span>Transform</span>
+                </div>
+                <div class="dag-node dag-process">
+                  <i class="fas fa-shield-alt"></i>
+                  <span>Validate</span>
+                </div>
+              </div>
+              <div class="dag-connections">
+                <div class="dag-arrow dag-arrow-down"></div>
+                <div class="dag-arrow dag-arrow-down"></div>
+                <div class="dag-arrow dag-arrow-down"></div>
+              </div>
+              <div class="dag-row">
+                <div class="dag-node dag-end">
+                  <i class="fas fa-chart-line"></i>
+                  <span>Analytics DB</span>
+                </div>
+                <div class="dag-node dag-end">
+                  <i class="fas fa-file-export"></i>
+                  <span>Export</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="example-card">
+            <div class="example-header">
+              <i class="fas fa-brain"></i>
+              <h3>ML Pipeline</h3>
+            </div>
+            <p>
+              End-to-end ML workflow with feature engineering, model training,
+              and A/B testing.
+            </p>
+            <div class="dag-workflow">
+              <div class="dag-node dag-start">
+                <i class="fas fa-database"></i>
+                <span>Raw Data</span>
+              </div>
+              <div class="dag-connections">
+                <div class="dag-arrow dag-arrow-down"></div>
+              </div>
+              <div class="dag-row">
+                <div class="dag-node dag-process">
+                  <i class="fas fa-tools"></i>
+                  <span>Feature Eng</span>
+                </div>
+              </div>
+              <div class="dag-connections">
+                <div class="dag-arrow dag-arrow-down"></div>
+                <div class="dag-arrow dag-arrow-down-right"></div>
+              </div>
+              <div class="dag-row">
+                <div class="dag-node dag-process">
+                  <i class="fas fa-graduation-cap"></i>
+                  <span>Train Model A</span>
+                </div>
+                <div class="dag-node dag-process">
+                  <i class="fas fa-graduation-cap"></i>
+                  <span>Train Model B</span>
+                </div>
+              </div>
+              <div class="dag-connections">
+                <div class="dag-arrow dag-arrow-down"></div>
+                <div class="dag-arrow dag-arrow-down"></div>
+              </div>
+              <div class="dag-row">
+                <div class="dag-node dag-end">
+                  <i class="fas fa-balance-scale"></i>
+                  <span>A/B Test</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="example-card">
+            <div class="example-header">
+              <i class="fas fa-globe"></i>
+              <h3>Web Scraping</h3>
+            </div>
+            <p>
+              Multi-source scraping with content analysis, deduplication, and
+              smart routing.
+            </p>
+            <div class="dag-workflow">
+              <div class="dag-row">
+                <div class="dag-node dag-start">
+                  <i class="fas fa-globe"></i>
+                  <span>Site A</span>
+                </div>
+                <div class="dag-node dag-start">
+                  <i class="fas fa-globe"></i>
+                  <span>Site B</span>
+                </div>
+                <div class="dag-node dag-start">
+                  <i class="fas fa-globe"></i>
+                  <span>Site C</span>
+                </div>
+              </div>
+              <div class="dag-connections">
+                <div class="dag-arrow dag-arrow-down"></div>
+                <div class="dag-arrow dag-arrow-down"></div>
+                <div class="dag-arrow dag-arrow-down"></div>
+              </div>
+              <div class="dag-row">
+                <div class="dag-node dag-process">
+                  <i class="fas fa-spider"></i>
+                  <span>Scrape</span>
+                </div>
+              </div>
+              <div class="dag-connections">
+                <div class="dag-arrow dag-arrow-down"></div>
+                <div class="dag-arrow dag-arrow-down-right"></div>
+              </div>
+              <div class="dag-row">
+                <div class="dag-node dag-process">
+                  <i class="fas fa-search"></i>
+                  <span>Analyze</span>
+                </div>
+                <div class="dag-node dag-process">
+                  <i class="fas fa-copy"></i>
+                  <span>Dedupe</span>
+                </div>
+              </div>
+              <div class="dag-connections">
+                <div class="dag-arrow dag-arrow-down"></div>
+                <div class="dag-arrow dag-arrow-down"></div>
+              </div>
+              <div class="dag-row">
+                <div class="dag-node dag-end">
+                  <i class="fas fa-bell"></i>
+                  <span>Notify</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cloud Service Section -->
+    <section class="cloud-service">
+      <div class="container">
+        <div class="section-header">
+          <div class="coming-soon-badge">
+            <i class="fas fa-rocket"></i>
+            <span>Coming Soon</span>
+          </div>
+          <h2>AtomOS Cloud Service</h2>
+          <p>
+            Scale your workflows with our managed cloud platform. Handle
+            high-volume processing with intelligent queuing and resource
+            management.
+          </p>
+        </div>
+        <div class="cloud-features">
+          <div class="cloud-feature-card">
+            <div class="cloud-feature-icon">
+              <i class="fas fa-users"></i>
+            </div>
+            <h3>Smart Waiting List</h3>
+            <p>
+              Intelligent queue management that automatically prioritizes
+              workflows based on complexity, user tier, and resource
+              availability. Never lose a request again.
+            </p>
+            <div class="feature-highlights">
+              <span class="highlight-tag">Priority Queuing</span>
+              <span class="highlight-tag">Auto-scaling</span>
+              <span class="highlight-tag">Fair Scheduling</span>
+            </div>
+          </div>
+          <div class="cloud-feature-card">
+            <div class="cloud-feature-icon">
+              <i class="fas fa-chart-line"></i>
+            </div>
+            <h3>Real-time Monitoring</h3>
+            <p>
+              Track workflow execution, queue status, and resource utilization
+              in real-time. Get insights into performance bottlenecks and
+              optimization opportunities.
+            </p>
+            <div class="feature-highlights">
+              <span class="highlight-tag">Live Dashboard</span>
+              <span class="highlight-tag">Performance Metrics</span>
+              <span class="highlight-tag">Alert System</span>
+            </div>
+          </div>
+          <div class="cloud-feature-card">
+            <div class="cloud-feature-icon">
+              <i class="fas fa-shield-alt"></i>
+            </div>
+            <h3>Enterprise Security</h3>
+            <p>
+              Bank-grade security with end-to-end encryption, role-based access
+              control, and compliance with industry standards. Your workflows
+              are safe with us.
+            </p>
+            <div class="feature-highlights">
+              <span class="highlight-tag">SOC 2 Compliant</span>
+              <span class="highlight-tag">RBAC</span>
+              <span class="highlight-tag">Audit Logs</span>
+            </div>
+          </div>
+        </div>
+        <div class="waiting-list">
+          <div class="waiting-list-content">
+            <div class="waiting-list-header">
+              <h3>Join the Waitlist</h3>
+              <p>
+                Be the first to know when AtomOS Cloud Service launches. Get
+                early access and exclusive pricing.
+              </p>
+            </div>
+            <form class="waiting-list-form" id="waitingListForm">
+              <div class="form-group">
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  placeholder="Enter your email address"
+                  required
+                  class="email-input"
+                />
+                <button type="submit" class="submit-button">
+                  <i class="fas fa-paper-plane"></i>
+                  Join Waitlist
+                </button>
+              </div>
+              <div class="form-success" id="formSuccess" style="display: none">
+                <i class="fas fa-check-circle"></i>
+                <span>Thanks! We'll notify you when we launch.</span>
+              </div>
+            </form>
+            <div class="waiting-list-benefits">
+              <div class="benefit">
+                <i class="fas fa-gift"></i>
+                <span>Early access & exclusive pricing</span>
+              </div>
+              <div class="benefit">
+                <i class="fas fa-bell"></i>
+                <span>Priority notifications</span>
+              </div>
+              <div class="benefit">
+                <i class="fas fa-users"></i>
+                <span>Join 500+ developers already waiting</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="cloud-stats">
+          <div class="cloud-stat">
+            <div class="stat-icon">
+              <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-content">
+              <span class="stat-number">99.9%</span>
+              <span class="stat-label">Uptime SLA</span>
+            </div>
+          </div>
+          <div class="cloud-stat">
+            <div class="stat-icon">
+              <i class="fas fa-rocket"></i>
+            </div>
+            <div class="stat-content">
+              <span class="stat-number">&lt;100ms</span>
+              <span class="stat-label">Queue Response Time</span>
+            </div>
+          </div>
+          <div class="cloud-stat">
+            <div class="stat-icon">
+              <i class="fas fa-globe"></i>
+            </div>
+            <div class="stat-content">
+              <span class="stat-number">15+</span>
+              <span class="stat-label">Global Regions</span>
+            </div>
+          </div>
+          <div class="cloud-stat">
+            <div class="stat-icon">
+              <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-content">
+              <span class="stat-number">10K+</span>
+              <span class="stat-label">Concurrent Users</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+      <div class="container">
+        <div class="cta-content">
+          <h2>Ready to Transform Your Libraries?</h2>
+          <p>
+            Join the future of AI-native development. Start building
+            deterministic workflows today.
+          </p>
+          <div class="cta-actions">
+            <button class="primary-button large">
+              <i class="fas fa-rocket"></i>
+              Get Started Free
+            </button>
+            <button class="secondary-button large">
+              <i class="fab fa-github"></i>
+              View on GitHub
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-content">
+          <div class="footer-section">
+            <h4>AtomOS</h4>
+            <p>The bridge between AI agents and open source libraries.</p>
+          </div>
+          <div class="footer-section">
+            <h4>Resources</h4>
+            <ul>
+              <li><a href="#docs">Documentation</a></li>
+              <li><a href="#examples">Examples</a></li>
+              <li><a href="#registry">Block Registry</a></li>
+            </ul>
+          </div>
+          <div class="footer-section">
+            <h4>Community</h4>
+            <ul>
+              <li><a href="#discord">Discord</a></li>
+              <li><a href="#github">GitHub</a></li>
+              <li><a href="#twitter">Twitter</a></li>
+            </ul>
+          </div>
+          <div class="footer-section">
+            <h4>Legal</h4>
+            <ul>
+              <li><a href="#privacy">Privacy</a></li>
+              <li><a href="#terms">Terms</a></li>
+              <li><a href="#license">License</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p>&copy; 2025 AtomOS. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>

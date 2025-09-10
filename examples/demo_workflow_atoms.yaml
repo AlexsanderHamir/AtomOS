@@ -1,0 +1,131 @@
+# Copyright (c) 2025 Alexsander Hamir Gomes Baptista
+#
+# This file is part of AtomOS and licensed under the Sustainable Use License (SUL).
+# You may use, modify, and redistribute this software for personal or internal business use.
+# Offering it as a commercial hosted service requires a separate license.
+#
+# Full license: see the LICENSE file in the root of this repository
+# or contact alexsanderhamirgomesbaptista@gmail.com.
+
+workflow_name: atomos demo workflow
+version: 1.0.0
+description: >
+  Demonstrates AtomOS block composition with fan-out, fan-in, and cross-block reuse.
+  This graph shows a realistic end-to-end path from data ingestion to deployment,
+  plus parallel reporting and notification branches.
+
+blocks:
+  - name: data-fetcher
+    version: v0.3.1
+    github: "example-org/data-fetcher"
+    force: false
+
+  - name: preprocessor
+    version: v1.1.0
+    github: "example-org/preprocessor"
+    force: false
+
+  - name: cache
+    version: v0.2.0
+    github: "example-org/cache"
+    force: false
+
+  - name: feature-extractor
+    version: v0.9.4
+    github: "example-org/feature-extractor"
+    force: false
+
+  - name: model-trainer
+    version: v2.0.0
+    github: "example-org/model-trainer"
+    force: false
+
+  - name: model-evaluator
+    version: v1.4.2
+    github: "example-org/model-evaluator"
+    force: false
+
+  - name: report-generator
+    version: v0.5.0
+    github: "example-org/report-generator"
+    force: false
+
+  - name: visualizer
+    version: v0.7.3
+    github: "example-org/visualizer"
+    force: false
+
+  - name: notifier
+    version: v0.1.9
+    github: "example-org/notifier"
+    force: false
+
+  - name: deployer
+    version: v1.0.0
+    github: "example-org/deployer"
+    force: false
+
+# Each connection declares the consumer entry (from_block/from_entry),
+# the artifact it consumes (input), and optionally its produced artifact (output).
+# Artifacts (output) can be referenced later by name via the 'input' field.
+connections:
+  # Ingestion
+  - from_block: data-fetcher
+    from_entry: fetch
+    output: raw_dataset
+
+  # Preprocess uses raw data; also fan-out to cache
+  - from_block: preprocessor
+    from_entry: clean
+    input: raw_dataset
+    output: clean_dataset
+
+  - from_block: cache
+    from_entry: store
+    input: clean_dataset
+    output: cache_key
+
+  # Feature extraction consumes the clean dataset (could also read from cache_key)
+  - from_block: feature-extractor
+    from_entry: extract
+    input: clean_dataset
+    output: features
+
+  # Training consumes features
+  - from_block: model-trainer
+    from_entry: train
+    input: features
+    output: model_artifact
+
+  # Evaluation consumes both model and features (two inputs -> two edges to same node)
+  - from_block: model-evaluator
+    from_entry: evaluate
+    input: model_artifact
+    output: metrics
+
+  - from_block: model-evaluator
+    from_entry: evaluate
+    input: features
+
+  # Reporting and visualization consume metrics (fan-out)
+  - from_block: report-generator
+    from_entry: summarize
+    input: metrics
+    output: summary_text
+
+  - from_block: visualizer
+    from_entry: chart
+    input: metrics
+    output: chart_image
+
+  # Notifications consume the textual summary
+  - from_block: notifier
+    from_entry: send
+    input: summary_text
+    output: notification_id
+
+  # Deployment consumes the trained model
+  - from_block: deployer
+    from_entry: release
+    input: model_artifact
+    output: release_id
